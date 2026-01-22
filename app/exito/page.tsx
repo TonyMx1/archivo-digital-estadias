@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+
 import ExitoFooter from '@/components/ExitoFooter';
 
 export default function ExitoPage() {

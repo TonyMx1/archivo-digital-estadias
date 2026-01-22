@@ -902,3 +902,26 @@ export async function deleteDocumento(idDoc: number, motivoBaja?: string) {
     throw error;
   }
 }
+
+// Función para obtener estadísticas generales
+export async function getStatistics() {
+  try {
+    const pool = getPool();
+    
+    const secretariasCount = await pool.query(
+      `SELECT COUNT(*) as total FROM secretarias`
+    );
+    
+    const dependenciasCount = await pool.query(
+      `SELECT COUNT(*) as total FROM dependencias`
+    );
+    
+    return {
+      secretarias: parseInt(secretariasCount.rows[0].total),
+      dependencias: parseInt(dependenciasCount.rows[0].total)
+    };
+  } catch (error) {
+    console.error('Error al obtener estadísticas:', error);
+    throw error;
+  }
+}

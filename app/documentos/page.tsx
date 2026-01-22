@@ -21,7 +21,7 @@ export default function DocumentosPage() {
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
-  
+
   // Estados de búsqueda y filtros
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroSecretaria, setFiltroSecretaria] = useState<number | "">("");
@@ -29,7 +29,7 @@ export default function DocumentosPage() {
   const [filtroAnio, setFiltroAnio] = useState("");
   const [filtroEstatus, setFiltroEstatus] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -121,7 +121,7 @@ export default function DocumentosPage() {
 
     const motivoBaja = prompt("Ingrese el motivo de la baja (opcional):");
     const result = await eliminarDocumento(idDoc, motivoBaja || undefined);
-    
+
     if (result.success) {
       alert("Documento eliminado exitosamente");
     } else {
@@ -174,7 +174,7 @@ export default function DocumentosPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b3b60]">
-        <HeaderAll />
+      <HeaderAll />
 
       <main className="flex-1 p-4">
         <div className="max-w-6xl mx-auto">
@@ -215,6 +215,7 @@ export default function DocumentosPage() {
               >
                 <span>Filtros</span>
                 <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
@@ -224,7 +225,7 @@ export default function DocumentosPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"
                   />
                 </svg>
               </button>
@@ -233,9 +234,23 @@ export default function DocumentosPage() {
               {!isViewer && (
                 <button
                   onClick={handleNuevoDocumento}
-                  className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                  className="px-4 py-2 bg-gradient-to-r from-[#00ae6f] to-[#408740] text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-[#408740]/30 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 whitespace-nowrap"
                 >
-                  📄 Nuevo documento
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+                    />
+                  </svg>
+                  Nuevo documento
                 </button>
               )}
             </div>
@@ -426,21 +441,20 @@ export default function DocumentosPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-600">Estatus:</span>
                           <span
-                            className={`px-2 py-1 rounded text-xs font-semibold ${
-                              documento.estatus_doc === "Activo"
+                            className={`px-2 py-1 rounded text-xs font-semibold ${documento.estatus_doc === "Activo"
                                 ? "bg-green-100 text-green-800"
                                 : documento.estatus_doc === "Inactivo"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
                           >
                             {documento.estatus_doc || "Activo"}
                           </span>
                         </div>
                       </div>
 
-                     {/* Botones de acción */}
-                     <div className="flex gap-2 pt-4 border-t border-gray-200">
+                      {/* Botones de acción */}
+                      <div className="flex gap-2 pt-4 border-t border-gray-200">
                         {documento.url_cons_doc && (
                           <a
                             href={documento.url_cons_doc}
@@ -451,7 +465,7 @@ export default function DocumentosPage() {
                             Ver Archivo
                           </a>
                         )}
-                        
+
                         {/* Botón para abrir el modal (Ver detalles para visor, Editar para otros) */}
                         <button
                           onClick={() => handleEditarDocumento(documento)}
@@ -492,11 +506,10 @@ export default function DocumentosPage() {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
-                            currentPage === page
+                          className={`px-4 py-2 font-semibold rounded-lg transition-colors ${currentPage === page
                               ? "bg-[#0076aa] text-white"
                               : "bg-white text-[#0b3b60] border-2 border-[#0b3b60] hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>

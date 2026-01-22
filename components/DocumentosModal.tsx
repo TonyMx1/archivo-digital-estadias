@@ -163,6 +163,8 @@ export default function DocumentosModal({
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
+  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -173,11 +175,48 @@ export default function DocumentosModal({
 
     setIsSubmitting(true);
 
+    let finalUrlConsDoc = urlConsDoc;
+
+    // 1. Si hay un archivo seleccionado, subirlo al servidor externo primero
+    if (archivo) {
+      try {
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        formData.append("sistema", "archivo_digital"); // Nombre de tu sistema
+        formData.append("rutaRelativa", `documentos/${anioDoc || new Date().getFullYear()}`);
+
+        const uploadResponse = await fetch("https://sanjuandelrio.sytes.net:3030/upload", {
+          method: "POST",
+          body: formData,
+          // Nota: No establezcas Content-Type, el navegador lo hará automáticamente con el boundary
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Error al subir el archivo al servidor externo");
+        }
+
+        const uploadData = await uploadResponse.json();
+        if (uploadData.status === "ok" && uploadData.archivos?.[0]?.url_publica) {
+          // Actualizamos la URL con la que nos devolvió el servidor privado
+          finalUrlConsDoc = uploadData.archivos[0].url_publica;
+          setUrlConsDoc(finalUrlConsDoc);
+        } else {
+          throw new Error("El servidor no devolvió una URL válida");
+        }
+      } catch (error) {
+        console.error("Error en carga de archivo:", error);
+        alert("Error al subir el archivo físico. El proceso se detendrá.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // 2. Preparar los datos para tu API local con la URL del archivo
     const documentoData: any = {
       nombre_doc: nombreDoc.trim(),
       tipo_doc: Number(tipoDoc),
       id_secre: Number(idSecre),
-      size_doc: sizeDoc.trim() || undefined,
+      size_doc: archivo ? `${(archivo.size / 1024).toFixed(2)} KB` : (sizeDoc.trim() || undefined),
       anio_doc: anioDoc.trim() || undefined,
       comentario_doc: comentarioDoc.trim() || undefined,
       meta_doc: metaDoc.trim() || undefined,
@@ -190,7 +229,7 @@ export default function DocumentosModal({
       confidencial_doc: confidencialDoc,
       fecha_doc: fechaDoc || undefined,
       hora_doc: horaDoc || undefined,
-      url_cons_doc: urlConsDoc.trim() || undefined,
+      url_cons_doc: finalUrlConsDoc.trim() || undefined, // Usamos la URL generada
       estatus_doc: estatusDoc,
       version_doc: versionDoc,
     };
