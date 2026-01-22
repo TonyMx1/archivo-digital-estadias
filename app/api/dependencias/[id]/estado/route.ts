@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
 import { toggleEstadoDependencia } from '@/lib/db';
 
-type RouteParams = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+type Params = { id: string };
 
 // Activar/Desactivar una dependencia
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<Params> }
+) {
   try {
     const token = await getTokenFromCookies();
 
@@ -29,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
     const idDependencia = parseInt(id);
     if (!idDependencia || isNaN(idDependencia)) {
       return NextResponse.json(

@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { getDependenciasBySecretaria, createDependencia} from '@/lib/db';
+import { getDependenciasBySecretaria, createDependencia, deleteDependencia } from '@/lib/db';
 
-type RouteParams = {
-  params: {
-    id_secretaria: string;
-  };
-};
+type Params = { id_secretaria: string };
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<Params> }
+) {
   try {
     const token = await getTokenFromCookies();
-
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
@@ -29,7 +27,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const idSecretaria = Number(params.id_secretaria);
+    const { id_secretaria } = await context.params;
+    const idSecretaria = Number(id_secretaria);
     if (!Number.isFinite(idSecretaria)) {
       return NextResponse.json({ error: 'ID de secretaría inválido' }, { status: 400 });
     }
@@ -42,10 +41,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<Params> }
+) {
   try {
     const token = await getTokenFromCookies();
-
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
@@ -55,7 +56,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
-    const idSecretaria = Number(params.id_secretaria);
+    const { id_secretaria } = await context.params;
+    const idSecretaria = Number(id_secretaria);
     if (!Number.isFinite(idSecretaria)) {
       return NextResponse.json({ error: 'ID de secretaría inválido' }, { status: 400 });
     }
@@ -73,6 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       nombre_dependencia: nombreDep,
       dep_nomcl: depNomcl || null,
     });
+
     return NextResponse.json({ success: true, dependencia });
   } catch (error) {
     console.error('Error al crear dependencia:', error);
@@ -80,10 +83,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<Params> }
+) {
   try {
     const token = await getTokenFromCookies();
-
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
@@ -93,14 +98,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
-    const idSecretaria = Number(params.id_secretaria);
+    const { id_secretaria } = await context.params;
+    const idSecretaria = Number(id_secretaria);
     if (!Number.isFinite(idSecretaria)) {
       return NextResponse.json({ error: 'ID de secretaría inválido' }, { status: 400 });
     }
 
     const body = await request.json();
     const idDependencia = Number(body?.id_dependencia);
-
     if (!Number.isFinite(idDependencia)) {
       return NextResponse.json({ error: 'ID de dependencia inválido' }, { status: 400 });
     }
