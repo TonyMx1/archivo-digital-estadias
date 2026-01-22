@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useDependencias, Dependencia } from "@/hooks/useDependencias";
+import { usePermisos } from "@/hooks/usePermisos";
+import { PERMISOS } from "@/lib/permisos";
 
 interface DependenciasModalProps {
   isOpen: boolean;
@@ -35,7 +37,11 @@ export default function DependenciasModal({
     useState<Dependencia | null>(null);
   const [editNombre, setEditNombre] = useState("");
   const [editNomenclatura, setEditNomenclatura] = useState("");
-  const [isViewer, setIsViewer] = useState(false);
+  
+  // Usar el nuevo sistema de permisos
+  const { hasPermission, loading: loadingPermisos } = usePermisos();
+  const puedeCrear = hasPermission(PERMISOS.CREAR_DEPENDENCIAS);
+  const puedeEditar = hasPermission(PERMISOS.EDITAR_DEPENDENCIAS);
 
   useEffect(() => {
     if (isOpen && secretariaId) {
@@ -54,27 +60,6 @@ export default function DependenciasModal({
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
-  // Obtener rol del usuario para modo solo lectura (visor = 10)
-  useEffect(() => {
-    const loadUserRole = async () => {
-      try {
-        const response = await fetch("/api/user");
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.success && data.user?.id_rol === 10) {
-          setIsViewer(true);
-        } else {
-          setIsViewer(false);
-        }
-      } catch (error) {
-        console.error("Error al obtener rol de usuario:", error);
-      }
-    };
-
-    if (isOpen) {
-      loadUserRole();
-    }
-  }, [isOpen]);
 
   const handleAgregar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +180,7 @@ export default function DependenciasModal({
           )}
 
           {/* Botón para agregar */}
-          {!isViewer && !showAddForm && (
+          {puedeCrear && !showAddForm && (
             <div className="mb-4">
               <button
                 onClick={() => setShowAddForm(true)}
@@ -221,7 +206,7 @@ export default function DependenciasModal({
           )}
 
           {/* Formulario para agregar */}
-          {!isViewer && showAddForm && (
+          {puedeCrear && showAddForm && (
             <form
               onSubmit={handleAgregar}
               className="mb-4 p-4 bg-gray-50 rounded-lg"
@@ -271,7 +256,7 @@ export default function DependenciasModal({
             </form>
           )}
 
-          {!isViewer && editingDependencia && (
+          {puedeEditar && editingDependencia && (
             <form
               onSubmit={handleActualizar}
               className="mb-4 p-4 bg-blue-50 rounded-lg"
@@ -339,7 +324,7 @@ export default function DependenciasModal({
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase w-6/12">Nombre</th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase w-2/12">Nomenclatura</th>
                     <th className="px-4 py-3 text-center text-xs font-bold uppercase w-2/12">Estado</th>
-                    {!isViewer && (
+                    {puedeEditar && (
                       <th className="px-4 py-3 text-center text-xs font-bold uppercase w-2/12">Acciones</th>
                     )}
                   </tr>
@@ -368,7 +353,7 @@ export default function DependenciasModal({
                             {estaActiva ? 'Activa' : 'Inactiva'}
                           </span>
                         </td>
-                        {!isViewer && (
+                        {puedeEditar && (
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-center min-w-[200px]">
                             <div className="flex items-center justify-center gap-2">
                               <button

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { getUserById, getUserRole, getRolePermissions } from '@/lib/db';
+import { getRolePermissions } from '@/lib/db';
 
-// Obtener información del usuario actual (incluyendo rol y nombre)
+// Obtener permisos del usuario actual
 export async function GET(request: NextRequest) {
   try {
     const token = await getTokenFromCookies();
@@ -23,27 +23,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener información completa del usuario desde la BD
-    const user = await getUserById(payload.id_usuarios);
-    const role = user ? await getUserRole(user.id_rol) : null;
     const permisos = await getRolePermissions(payload.id_rol);
 
     return NextResponse.json({
       success: true,
-      user: {
-        id_usuarios: payload.id_usuarios,
-        curp: payload.curp,
-        id_rol: payload.id_rol,
-        id_general: payload.id_general,
-        nombre_usuario: user?.nombre_usuario || null,
-        nombre_rol: role?.rol || null,
-        permisos,
-      },
+      permisos,
+      id_rol: payload.id_rol,
     });
   } catch (error) {
-    console.error('Error al obtener usuario:', error);
+    console.error('Error al obtener permisos:', error);
     return NextResponse.json(
-      { error: 'Error al obtener información del usuario' },
+      { error: 'Error al obtener permisos del usuario' },
       { status: 500 }
     );
   }

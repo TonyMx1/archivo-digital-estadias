@@ -27,7 +27,7 @@ export default function DocumentosPage() {
   const [filtroSecretaria, setFiltroSecretaria] = useState<number | "">("");
   const [filtroTipo, setFiltroTipo] = useState<number | "">("");
   const [filtroAnio, setFiltroAnio] = useState("");
-  const [filtroEstatus, setFiltroEstatus] = useState("");
+  const [filtroEstatus, setFiltroEstatus] = useState("Activo");
   const [showFilters, setShowFilters] = useState(false);
 
   // Paginación
@@ -130,15 +130,30 @@ export default function DocumentosPage() {
   };
 
   const handleCloseModal = () => {
-    setModalOpen(false);
-    setEditingDocumento(null);
-  };
+  setModalOpen(false);
+  setEditingDocumento(null);
+};
+
+// ✅ NUEVA FUNCIÓN: Se ejecuta solo cuando se guarda exitosamente
+const handleDocumentoGuardado = () => {
+  // Recargar con los filtros actuales
+  const filters: any = {};
+  if (filtroSecretaria) filters.id_secre = Number(filtroSecretaria);
+  if (filtroTipo) filters.tipo_doc = Number(filtroTipo);
+  if (filtroAnio) filters.anio_doc = filtroAnio;
+  if (filtroEstatus) filters.estatus_doc = filtroEstatus;
+  
+  console.log('✅ Recargando documentos después de guardar...');
+  fetchDocumentos(filters);
+};
+
+
 
   const limpiarFiltros = () => {
     setFiltroSecretaria("");
     setFiltroTipo("");
     setFiltroAnio("");
-    setFiltroEstatus("");
+    setFiltroEstatus("Activo");
     setSearchQuery("");
     setCurrentPage(1);
   };
@@ -536,6 +551,7 @@ export default function DocumentosPage() {
       <DocumentosModal
         isOpen={modalOpen}
         onClose={handleCloseModal}
+        onSuccess={handleDocumentoGuardado}
         documento={editingDocumento}
         isEditing={!!editingDocumento}
         isReadOnly={isViewer}

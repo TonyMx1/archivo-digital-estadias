@@ -13,6 +13,7 @@ interface TipoDocumento {
 interface DocumentosModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   documento?: Documento | null;
   isEditing?: boolean;
   isReadOnly?: boolean;
@@ -21,6 +22,7 @@ interface DocumentosModalProps {
 export default function DocumentosModal({
   isOpen,
   onClose,
+  onSuccess,
   documento,
   isEditing = false,
   isReadOnly = false,
@@ -55,7 +57,7 @@ export default function DocumentosModal({
   const [archivo, setArchivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'camera'>('file');
-    
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -163,33 +165,33 @@ export default function DocumentosModal({
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // PASO 1: Validar campos requeridos
     if (!nombreDoc.trim() || !tipoDoc || !idSecre) {
       alert("Por favor completa los campos requeridos: Nombre, Tipo de documento y Secretaría");
       return;
     }
-  
+
     setIsSubmitting(true);
     let finalUrlConsDoc = urlConsDoc;
-  
+
     // PASO 2: Si hay un archivo, subirlo primero usando nuestra función
     if (archivo) {
       try {
         console.log('📤 Subiendo archivo...', archivo.name);
-        
+
         // ✅ USAR LA FUNCIÓN subirArchivo del hook
         const uploadResult = await subirArchivo(
           archivo,                                              // El archivo
           "ARCHIVO_DIGITAL",                                    // Nombre del sistema
           `documentos/${anioDoc || new Date().getFullYear()}`   // Carpeta: documentos/2026
         );
-  
+
         console.log('📥 Resultado de subida:', uploadResult);
-  
+
         // Verificar si la subida fue exitosa
         if (uploadResult.success && uploadResult.url) {
           finalUrlConsDoc = uploadResult.url;  // ✅ Guardar la URL pública
@@ -198,7 +200,7 @@ export default function DocumentosModal({
         } else {
           throw new Error(uploadResult.error || 'Error al subir archivo');
         }
-  
+
       } catch (error: any) {
         console.error("❌ Error al subir archivo:", error);
         alert("Error al subir el archivo físico: " + error.message);
@@ -206,14 +208,14 @@ export default function DocumentosModal({
         return; // Detener el proceso si falla la subida
       }
     }
-  
+
     // PASO 3: Preparar los datos para guardar en la base de datos
     const documentoData: any = {
       nombre_doc: nombreDoc.trim(),
       tipo_doc: Number(tipoDoc),
       id_secre: Number(idSecre),
-      size_doc: archivo 
-        ? `${(archivo.size / 1024).toFixed(2)} KB` 
+      size_doc: archivo
+        ? `${(archivo.size / 1024).toFixed(2)} KB`
         : (sizeDoc.trim() || undefined),
       anio_doc: anioDoc.trim() || undefined,
       comentario_doc: comentarioDoc.trim() || undefined,
@@ -231,7 +233,7 @@ export default function DocumentosModal({
       estatus_doc: estatusDoc,
       version_doc: versionDoc,
     };
-  
+
     // PASO 4: Crear o actualizar el documento en la base de datos
     try {
       let result;
@@ -243,10 +245,16 @@ export default function DocumentosModal({
       } else {
         result = await crearDocumento(documentoData);
       }
-  
+
       // PASO 5: Mostrar resultado
       if (result.success) {
         alert(isEditing ? "Documento actualizado exitosamente" : "Documento creado exitosamente");
+
+        // ✅ Llamar a onSuccess ANTES de cerrar
+        if (onSuccess) {
+          onSuccess();
+        }
+
         onClose();
       } else {
         alert(result.error || `Error al ${isEditing ? 'actualizar' : 'crear'} documento`);
@@ -258,8 +266,8 @@ export default function DocumentosModal({
       setIsSubmitting(false);
     }
   };
-  
-  
+
+
   if (!isOpen) return null;
 
   return (
@@ -560,8 +568,8 @@ export default function DocumentosModal({
                   type="button"
                   onClick={() => setUploadMethod('file')}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${uploadMethod === 'file'
-                      ? 'bg-[#0076aa] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#0076aa] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   disabled={isSubmitting}
                 >
@@ -571,8 +579,8 @@ export default function DocumentosModal({
                   type="button"
                   onClick={() => setUploadMethod('camera')}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${uploadMethod === 'camera'
-                      ? 'bg-[#0076aa] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#0076aa] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   disabled={isSubmitting}
                 >

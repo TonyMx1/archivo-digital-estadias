@@ -570,21 +570,74 @@ export async function toggleEstadoDependencia(idDependencia: number, activo: boo
 }
 
 // Función para obtener los permisos de un rol
-export async function getRolePermissions(idRol: number) {
+export async function getRolePermissions(idRol: number): Promise<string[]> {
   try {
     const pool = getPool();
     const result = await pool.query(
-      `SELECT p.id_permisos, p.nomb_permisos
-       FROM permisos p
-       INNER JOIN rol_permisos rp ON p.id_permisos = rp.id_permisos
-       WHERE rp.id_rol = $1`,
+      `SELECT nombre_permiso
+       FROM rol_permisos
+       WHERE id_rol = $1`,
       [idRol]
     );
     
-    return result.rows;
+    return result.rows.map((row: { nombre_permiso: string }) => row.nombre_permiso);
   } catch (error) {
     console.error('Error al obtener permisos del rol:', error);
     throw error;
+  }
+}
+
+// Función para verificar si un rol tiene un permiso específico
+export async function hasPermission(idRol: number, nombrePermiso: string): Promise<boolean> {
+  try {
+    const pool = getPool();
+    const result = await pool.query(
+      `SELECT 1 FROM rol_permisos
+       WHERE id_rol = $1 AND nombre_permiso = $2
+       LIMIT 1`,
+      [idRol, nombrePermiso]
+    );
+    
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error al verificar permiso:', error);
+    return false;
+  }
+}
+
+// Función para verificar múltiples permisos (devuelve true si tiene al menos uno)
+export async function hasAnyPermission(idRol: number, permisos: string[]): Promise<boolean> {
+  try {
+    const pool = getPool();
+    const result = await pool.query(
+      `SELECT 1 FROM rol_permisos
+       WHERE id_rol = $1 AND nombre_permiso = ANY($2)
+       LIMIT 1`,
+      [idRol, permisos]
+    );
+    
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error al verificar permisos:', error);
+    return false;
+  }
+}
+
+// Función para verificar que tiene todos los permisos especificados
+export async function hasAllPermissions(idRol: number, permisos: string[]): Promise<boolean> {
+  try {
+    const pool = getPool();
+    const result = await pool.query(
+      `SELECT COUNT(DISTINCT nombre_permiso) as count
+       FROM rol_permisos
+       WHERE id_rol = $1 AND nombre_permiso = ANY($2)`,
+      [idRol, permisos]
+    );
+    
+    return parseInt(result.rows[0].count) === permisos.length;
+  } catch (error) {
+    console.error('Error al verificar permisos:', error);
+    return false;
   }
 }
 
