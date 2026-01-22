@@ -51,11 +51,11 @@ export function useDocumentos() {
 
       const url = `/api/documentos${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error('Error al cargar documentos');
       }
-      
+
       const data = await response.json();
       if (data.success) {
         setDocumentos(data.documentos || []);
@@ -171,6 +171,80 @@ export function useDocumentos() {
     }
   };
 
+  // 📤 NUEVA FUNCIÓN: Subir archivo físico al servidor
+  const subirArchivo = async (
+    file: File,
+    sistema: string,
+    rutaRelativa: string
+  ) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Verificar tamaño antes de convertir
+      const sizeInMB = file.size / (1024 * 1024);
+      if (sizeInMB > 20) {
+        throw new Error(`El archivo es demasiado grande (${sizeInMB.toFixed(2)} MB). El máximo es 20 MB.`);
+      }
+
+      console.log('📤 Archivo a subir:', {
+        nombre: file.name,
+        tamaño: sizeInMB.toFixed(2) + ' MB',
+        tipo: file.type
+      });
+
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Error al leer el archivo'));
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file: base64,
+          sistema: sistema,
+          rutaRelativa: rutaRelativa,
+          nombreOriginal: file.name  // ✅ AGREGAR ESTA LÍNEA
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al subir archivo');
+      }
+
+      const data = await response.json();
+      console.log('✅ Respuesta del servidor:', data);
+
+      if (data.status === 'ok' && data.archivos && data.archivos.length > 0) {
+        return {
+          success: true,
+          url: data.archivos[0].url_publica,
+          rutaFisica: data.archivos[0].ruta_fisica,
+          nombreArchivo: data.archivos[0].filename
+        };
+      } else {
+        throw new Error('Respuesta inesperada del servidor');
+      }
+
+    } catch (err: any) {
+      setError(err.message || 'Error al subir archivo');
+      console.error('❌ Error completo:', err);
+      return {
+        success: false,
+        error: err.message
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return {
     documentos,
     loading,
@@ -179,5 +253,6 @@ export function useDocumentos() {
     crearDocumento,
     actualizarDocumento,
     eliminarDocumento,
+    subirArchivo,
   };
 }

@@ -25,7 +25,7 @@ export default function DocumentosModal({
   isEditing = false,
   isReadOnly = false,
 }: DocumentosModalProps) {
-  const { crearDocumento, actualizarDocumento } = useDocumentos();
+  const { crearDocumento, actualizarDocumento, subirArchivo } = useDocumentos();
   const { secretarias } = useSecretarias();
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [loadingTipos, setLoadingTipos] = useState(false);
@@ -164,59 +164,57 @@ export default function DocumentosModal({
   }, [isOpen]);
 
   
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
+    // PASO 1: Validar campos requeridos
     if (!nombreDoc.trim() || !tipoDoc || !idSecre) {
       alert("Por favor completa los campos requeridos: Nombre, Tipo de documento y Secretaría");
       return;
     }
-
+  
     setIsSubmitting(true);
-
     let finalUrlConsDoc = urlConsDoc;
-
-    // 1. Si hay un archivo seleccionado, subirlo al servidor externo primero
+  
+    // PASO 2: Si hay un archivo, subirlo primero usando nuestra función
     if (archivo) {
       try {
-        const formData = new FormData();
-        formData.append("archivo", archivo);
-        formData.append("sistema", "archivo_digital"); // Nombre de tu sistema
-        formData.append("rutaRelativa", `documentos/${anioDoc || new Date().getFullYear()}`);
-
-        const uploadResponse = await fetch("https://sanjuandelrio.sytes.net:3030/upload", {
-          method: "POST",
-          body: formData,
-          // Nota: No establezcas Content-Type, el navegador lo hará automáticamente con el boundary
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error("Error al subir el archivo al servidor externo");
-        }
-
-        const uploadData = await uploadResponse.json();
-        if (uploadData.status === "ok" && uploadData.archivos?.[0]?.url_publica) {
-          // Actualizamos la URL con la que nos devolvió el servidor privado
-          finalUrlConsDoc = uploadData.archivos[0].url_publica;
+        console.log('📤 Subiendo archivo...', archivo.name);
+        
+        // ✅ USAR LA FUNCIÓN subirArchivo del hook
+        const uploadResult = await subirArchivo(
+          archivo,                                              // El archivo
+          "ARCHIVO_DIGITAL",                                    // Nombre del sistema
+          `documentos/${anioDoc || new Date().getFullYear()}`   // Carpeta: documentos/2026
+        );
+  
+        console.log('📥 Resultado de subida:', uploadResult);
+  
+        // Verificar si la subida fue exitosa
+        if (uploadResult.success && uploadResult.url) {
+          finalUrlConsDoc = uploadResult.url;  // ✅ Guardar la URL pública
           setUrlConsDoc(finalUrlConsDoc);
+          console.log('✅ Archivo subido correctamente:', finalUrlConsDoc);
         } else {
-          throw new Error("El servidor no devolvió una URL válida");
+          throw new Error(uploadResult.error || 'Error al subir archivo');
         }
-      } catch (error) {
-        console.error("Error en carga de archivo:", error);
-        alert("Error al subir el archivo físico. El proceso se detendrá.");
+  
+      } catch (error: any) {
+        console.error("❌ Error al subir archivo:", error);
+        alert("Error al subir el archivo físico: " + error.message);
         setIsSubmitting(false);
-        return;
+        return; // Detener el proceso si falla la subida
       }
     }
-
-    // 2. Preparar los datos para tu API local con la URL del archivo
+  
+    // PASO 3: Preparar los datos para guardar en la base de datos
     const documentoData: any = {
       nombre_doc: nombreDoc.trim(),
       tipo_doc: Number(tipoDoc),
       id_secre: Number(idSecre),
-      size_doc: archivo ? `${(archivo.size / 1024).toFixed(2)} KB` : (sizeDoc.trim() || undefined),
+      size_doc: archivo 
+        ? `${(archivo.size / 1024).toFixed(2)} KB` 
+        : (sizeDoc.trim() || undefined),
       anio_doc: anioDoc.trim() || undefined,
       comentario_doc: comentarioDoc.trim() || undefined,
       meta_doc: metaDoc.trim() || undefined,
@@ -229,31 +227,39 @@ export default function DocumentosModal({
       confidencial_doc: confidencialDoc,
       fecha_doc: fechaDoc || undefined,
       hora_doc: horaDoc || undefined,
-      url_cons_doc: finalUrlConsDoc.trim() || undefined, // Usamos la URL generada
+      url_cons_doc: finalUrlConsDoc.trim() || undefined, // ✅ URL del archivo subido
       estatus_doc: estatusDoc,
       version_doc: versionDoc,
     };
-
-    let result;
-    if (isEditing && documento?.id_doc) {
-      result = await actualizarDocumento({
-        id_doc: documento.id_doc,
-        ...documentoData,
-      });
-    } else {
-      result = await crearDocumento(documentoData);
+  
+    // PASO 4: Crear o actualizar el documento en la base de datos
+    try {
+      let result;
+      if (isEditing && documento?.id_doc) {
+        result = await actualizarDocumento({
+          id_doc: documento.id_doc,
+          ...documentoData,
+        });
+      } else {
+        result = await crearDocumento(documentoData);
+      }
+  
+      // PASO 5: Mostrar resultado
+      if (result.success) {
+        alert(isEditing ? "Documento actualizado exitosamente" : "Documento creado exitosamente");
+        onClose();
+      } else {
+        alert(result.error || `Error al ${isEditing ? 'actualizar' : 'crear'} documento`);
+      }
+    } catch (error: any) {
+      console.error("❌ Error al guardar documento:", error);
+      alert("Error al guardar el documento: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (result.success) {
-      alert(isEditing ? "Documento actualizado exitosamente" : "Documento creado exitosamente");
-      onClose();
-    } else {
-      alert(result.error || `Error al ${isEditing ? 'actualizar' : 'crear'} documento`);
-    }
-
-    setIsSubmitting(false);
   };
-
+  
+  
   if (!isOpen) return null;
 
   return (
