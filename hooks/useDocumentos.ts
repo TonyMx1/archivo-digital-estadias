@@ -181,11 +181,11 @@ export function useDocumentos() {
   setError(null);
 
   try {
-    // 1️⃣ Validar tamaño (20 MB)
+    // 1️⃣ Validar tamaño (25 MB)
     const sizeInMB = file.size / (1024 * 1024);
-    if (sizeInMB > 20) {
+    if (sizeInMB > 25) {
       throw new Error(
-        `El archivo es demasiado grande (${sizeInMB.toFixed(2)} MB). Máximo 20 MB.`
+        `El archivo es demasiado grande (${sizeInMB.toFixed(2)} MB). Máximo 25 MB.`
       );
     }
 

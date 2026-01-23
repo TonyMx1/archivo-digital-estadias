@@ -40,8 +40,9 @@ export default function DependenciasModal({
   
   // Usar el nuevo sistema de permisos
   const { hasPermission, loading: loadingPermisos } = usePermisos();
-  const puedeCrear = hasPermission(PERMISOS.CREAR_DEPENDENCIAS);
-  const puedeEditar = hasPermission(PERMISOS.EDITAR_DEPENDENCIAS);
+  const esAdminTotal = hasPermission(PERMISOS.ADMIN_TOTAL);
+  const puedeCrear = esAdminTotal || hasPermission(PERMISOS.CREAR_DEPENDENCIAS);
+  const puedeEditar = esAdminTotal || hasPermission(PERMISOS.EDITAR_DEPENDENCIAS);
 
   useEffect(() => {
     if (isOpen && secretariaId) {

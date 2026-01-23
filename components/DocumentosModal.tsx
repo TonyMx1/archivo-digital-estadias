@@ -370,11 +370,20 @@ export default function DocumentosModal({
                 </label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={anioDoc}
-                  onChange={(e) => setAnioDoc(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Solo permite números, elimina cualquier caracter no numérico
+                    if (/^[0-9]*$/.test(value)) {
+                      setAnioDoc(value);
+                    }
+                  }}
                   maxLength={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                   disabled={isSubmitting}
+                  placeholder="2024"
                 />
               </div>
 
@@ -414,6 +423,7 @@ export default function DocumentosModal({
                   onChange={(e) => setSizeDoc(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                   disabled={isSubmitting}
+                  placeholder="1.2 MB (o valor aproximado)"
                 />
               </div>
 

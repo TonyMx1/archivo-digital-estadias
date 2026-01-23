@@ -16,6 +16,7 @@
     "pdf-parse": "^2.4.5",
     "pg": "^8.16.3",
     "react": "19.2.3",
+    "react-datepicker": "^9.1.0",
     "react-dom": "19.2.3",
     "tesseract.js": "^7.0.0"
   },

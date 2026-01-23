@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Límite máximo de archivo en bytes (25 MB)
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   try {
     // 1️⃣ Leer FormData entrante (desde el hook)
@@ -14,6 +17,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Faltan datos: archivo, sistema o rutaRelativa' },
         { status: 400 }
+      );
+    }
+
+    // 2.5️⃣ Validar tamaño del archivo
+    if (archivo.size > MAX_FILE_SIZE) {
+      const sizeInMB = (archivo.size / (1024 * 1024)).toFixed(2);
+      return NextResponse.json(
+        { error: `El archivo es demasiado grande (${sizeInMB} MB). Máximo permitido: 25 MB.` },
+        { status: 413 }
       );
     }
 
