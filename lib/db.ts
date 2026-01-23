@@ -388,7 +388,6 @@ async function resolveDependenciasTable(pool: Pool): Promise<{
   return null;
 }
 
-// Función para crear una dependencia
   export async function createDependencia(dependenciaData: {
   id_secretaria: number | null;
   nombre_dependencia: string;
@@ -405,11 +404,10 @@ async function resolveDependenciasTable(pool: Pool): Promise<{
       throw new Error('No existe columna de nomenclatura en dependencias');
     }
 
-    // Verificar si existe el campo activo
     const [schema, table] = dependencyTable.tableName.includes('.')
       ? dependencyTable.tableName.split('.')
       : ['public', dependencyTable.tableName];
-    
+
     let tieneCampoActivo = false;
     let campoActivo = 'activo';
     try {
@@ -426,7 +424,6 @@ async function resolveDependenciasTable(pool: Pool): Promise<{
         campoActivo = columnCheck.rows[0].column_name;
       }
     } catch {
-      // Si no existe, intentar crearlo
       try {
         await pool.query(
           `ALTER TABLE ${dependencyTable.tableName} ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true`
@@ -434,7 +431,6 @@ async function resolveDependenciasTable(pool: Pool): Promise<{
         tieneCampoActivo = true;
         campoActivo = 'activo';
       } catch {
-        // Si no se puede crear, continuar sin el campo
       }
     }
 
@@ -445,19 +441,67 @@ async function resolveDependenciasTable(pool: Pool): Promise<{
                  ${dependencyTable.nombreColumn} AS nombre_dependencia,
                  ${dependencyTable.nomclColumn} AS dep_nomcl${tieneCampoActivo ? `, ${campoActivo} AS activo` : ''}`;
 
-                 const result = await pool.query(
-                  `INSERT INTO ${dependencyTable.tableName} (${columns})
-                   VALUES (${values})
-                   RETURNING ${returning}`,
-                  [
-                    dependenciaData.id_secretaria,
-                    dependenciaData.nombre_dependencia,
-                    dependenciaData.dep_nomcl || null, // Permite que sea null si no se envía
-                  ]
-                );
+    const result = await pool.query(
+      `INSERT INTO ${dependencyTable.tableName} (${columns})
+       VALUES (${values})
+       RETURNING ${returning}`,
+      [
+        dependenciaData.id_secretaria,
+        dependenciaData.nombre_dependencia,
+        dependenciaData.dep_nomcl || null,
+      ]
+    );
     return result.rows[0];
   } catch (error) {
     console.error('Error al crear dependencia:', error);
+    throw error;
+  }
+}
+
+// Función para eliminar una dependencia
+export async function deleteDependencia(idSecretaria: number, idDependencia: number) {
+  try {
+    const pool = getPool();
+    const dependencyTable = await resolveDependenciasTable(pool);
+
+    if (!dependencyTable) {
+      throw new Error('No existe una tabla de dependencias disponible');
+    }
+
+    const [schema, table] = dependencyTable.tableName.includes('.')
+      ? dependencyTable.tableName.split('.')
+      : ['public', dependencyTable.tableName];
+
+    const columnCheck = await pool.query(
+      `SELECT column_name 
+       FROM information_schema.columns 
+       WHERE table_schema = $1 
+       AND table_name = $2 
+       AND column_name IN ('activo', 'estado', 'habilitado', 'enabled')`,
+      [schema, table]
+    );
+
+    if (columnCheck.rows.length > 0) {
+      const estadoColumn = columnCheck.rows[0].column_name;
+      const result = await pool.query(
+        `UPDATE ${dependencyTable.tableName}
+         SET ${estadoColumn} = false
+         WHERE id_dependencia = $1
+           AND ${dependencyTable.secretariaColumn} = $2`,
+        [idDependencia, idSecretaria]
+      );
+      return (result.rowCount ?? 0) > 0;
+    }
+
+    const result = await pool.query(
+      `DELETE FROM ${dependencyTable.tableName}
+       WHERE id_dependencia = $1
+         AND ${dependencyTable.secretariaColumn} = $2`,
+      [idDependencia, idSecretaria]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error al eliminar dependencia:', error);
     throw error;
   }
 }
