@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         curp: cleanCurp,
         // Aquí conectamos el ID que viene de la respuesta JSON que mostraste
         id_general: cusLoginResult.id_usuario_general, 
-        id_rol: 7, // Rol de usuario por defecto
+        id_rol: 9, // Rol de visitante por defecto - requiere autorización de admin
       });
 
       if (!user) {

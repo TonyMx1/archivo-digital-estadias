@@ -279,7 +279,7 @@ export default function DocumentosModal({
         {/* Header del modal */}
         <div className="bg-[#0076aa] text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold">
+            <h2 className="text-xl font-bold pl-6">
               {isEditing ? "Editar Documento" : "Nuevo Documento"}
             </h2>
           </div>
@@ -303,6 +303,13 @@ export default function DocumentosModal({
               />
             </svg>
           </button>
+        </div>
+
+        {/* Nota de campos obligatorios */}
+        <div className="px-6 py-2 bg-gray-300 border-b border-gray-200">
+          <p className="text-sm text-gray-600">
+            Los campos con <span className="text-red-500 font-bold text-base">*</span> son obligatorios
+          </p>
         </div>
 
         {/* Contenido del modal */}
@@ -565,6 +572,7 @@ export default function DocumentosModal({
                 onChange={(e) => setUrlConsDoc(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                 disabled={isSubmitting}
+                placeholder="https://drive.google.com/file/d/1a2B3c4D5e6F7g8H9/view"
               />
             </div>
 

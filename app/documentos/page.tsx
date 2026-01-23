@@ -188,8 +188,8 @@ const handleDocumentoGuardado = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b3b60]">
-      <HeaderAll />
+    <div className="min-h-screen bg-[#0b3b60] flex flex-col">
+      <HeaderAll showMenuButton={true} />
 
       <main className="flex-1 p-4">
         <div className="max-w-6xl mx-auto">
