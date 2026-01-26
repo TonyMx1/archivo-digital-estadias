@@ -20,7 +20,7 @@ export default function ExitoFooter() {
           </div>
 
           {/* Separador vertical */}
-          <div className="h-10 w-px bg-white/40"></div>
+          <div className="h-11 w-px bg-white/50"></div>
 
           {/* Texto */}
           <div>

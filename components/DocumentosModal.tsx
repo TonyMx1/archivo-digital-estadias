@@ -64,6 +64,10 @@ export default function DocumentosModal({
     if (file) {
       setArchivo(file);
 
+      // Autocompletar el campo de tamaño
+      const fileSizeKB = (file.size / 1024).toFixed(2);
+      setSizeDoc(`${fileSizeKB} KB`);
+
       // Crear preview si es una imagen
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
@@ -317,6 +321,7 @@ export default function DocumentosModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campos principales */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nombre del documento */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre del documento <span className="text-red-500">*</span>
@@ -331,6 +336,7 @@ export default function DocumentosModal({
                 />
               </div>
 
+              {/* Tipo de documento */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo de documento <span className="text-red-500">*</span>
@@ -351,6 +357,7 @@ export default function DocumentosModal({
                 </select>
               </div>
 
+              {/* Secretaría */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Secretaría <span className="text-red-500">*</span>
@@ -371,29 +378,7 @@ export default function DocumentosModal({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Año
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={anioDoc}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Solo permite números, elimina cualquier caracter no numérico
-                    if (/^[0-9]*$/.test(value)) {
-                      setAnioDoc(value);
-                    }
-                  }}
-                  maxLength={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  disabled={isSubmitting}
-                  placeholder="2024"
-                />
-              </div>
-
+              {/* Fecha del documento */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Fecha del documento
@@ -406,7 +391,34 @@ export default function DocumentosModal({
                   disabled={isSubmitting}
                 />
               </div>
+            </div>
 
+            {/* Fila de Año, Hora y Estatus */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Año */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Año
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={anioDoc}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (/^[0-9]*$/.test(value)) {
+                      setAnioDoc(value);
+                    }
+                  }}
+                  maxLength={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                  disabled={isSubmitting}
+                  placeholder="2024"
+                />
+              </div>
+
+              {/* Hora del documento */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Hora del documento
@@ -420,20 +432,7 @@ export default function DocumentosModal({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tamaño
-                </label>
-                <input
-                  type="text"
-                  value={sizeDoc}
-                  onChange={(e) => setSizeDoc(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  disabled={isSubmitting}
-                  placeholder="1.2 MB (o valor aproximado)"
-                />
-              </div>
-
+              {/* Estatus */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Estatus
@@ -451,8 +450,9 @@ export default function DocumentosModal({
               </div>
             </div>
 
-            {/* Campos de clasificación */}
+            {/* Fila de Oficio y Expediente */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Oficio */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Oficio
@@ -466,6 +466,7 @@ export default function DocumentosModal({
                 />
               </div>
 
+              {/* Expediente */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Expediente
@@ -574,12 +575,16 @@ export default function DocumentosModal({
                 disabled={isSubmitting}
                 placeholder="https://drive.google.com/file/d/1a2B3c4D5e6F7g8H9/view"
               />
+              <p className="text-xs text-gray-600 mt-1">
+                Llenar en caso de subir un archivo mediante Google Drive o enlace similar
+              </p>
             </div>
+
 
             {/* Sección de carga de archivo */}
             <div className="border-t pt-4 mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Método de carga de archivo
+                {/* Método de carga de archivo */}
               </label>
               <div className="flex gap-4 mb-4">
                 <button
@@ -658,19 +663,37 @@ export default function DocumentosModal({
               )}
             </div>
 
-            {/* Checkbox confidencial */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="confidencial"
-                checked={confidencialDoc}
-                onChange={(e) => setConfidencialDoc(e.target.checked)}
-                className="w-4 h-4 text-[#0076aa] border-gray-300 rounded focus:ring-[#0076aa]"
-                disabled={isSubmitting}
-              />
-              <label htmlFor="confidencial" className="ml-2 text-sm font-medium text-gray-700">
-                Documento confidencial
-              </label>
+            {/* Tamaño y Checkbox confidencial en la misma fila */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+              {/* Tamaño */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tamaño <span className="text-gray-500 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={sizeDoc}
+                  onChange={(e) => setSizeDoc(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                  disabled={isSubmitting}
+                  placeholder="Ej: 1.2 MB - Se autocompleta al subir archivo"
+                />
+              </div>
+
+              {/* Checkbox confidencial */}
+              <div className="flex items-center h-[42px]">
+                <input
+                  type="checkbox"
+                  id="confidencial"
+                  checked={confidencialDoc}
+                  onChange={(e) => setConfidencialDoc(e.target.checked)}
+                  className="w-4 h-4 text-[#0076aa] border-gray-300 rounded focus:ring-[#0076aa]"
+                  disabled={isSubmitting}
+                />
+                <label htmlFor="confidencial" className="ml-2 text-sm font-medium text-gray-700">
+                  Documento confidencial
+                </label>
+              </div>
             </div>
 
             {/* Botones */}

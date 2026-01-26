@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resumen: OCR para Buscador Inteligente (PDF/Word/Imagen)</title>
+  <style>
+    :root { --fg:#111827; --muted:#6b7280; --border:#e5e7eb; --bg:#ffffff; --accent:#2563eb; }
+    html, body { background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif; line-height: 1.45; }
+    body { margin: 32px; }
+    h1 { font-size: 24px; margin: 0 0 8px; }
+    h2 { font-size: 18px; margin: 28px 0 10px; }
+    h3 { font-size: 15px; margin: 18px 0 8px; }
+    p { margin: 8px 0; }
+    .meta { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+    .callout { border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 12px 14px; border-radius: 8px; background: #f8fafc; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 12px; }
+    th, td { border: 1px solid var(--border); padding: 10px; vertical-align: top; }
+    th { background: #f9fafb; text-align: left; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    pre { background: #0b1020; color: #e5e7eb; padding: 12px; border-radius: 8px; overflow: auto; }
+    .small { font-size: 12px; color: var(--muted); }
+    ul { margin: 6px 0 12px 20px; }
+    li { margin: 4px 0; }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 22px 0; }
+  </style>
+</head>
+<body>
+  <h1>Resumen: OCR para Buscador Inteligente (PDF/Word/Imagen)</h1>
+  <div class="meta">Documento de referencia (consulta). Incluye opciones técnicas, flujo recomendado, uso de <code>meta_doc</code>, manejo de fotos desde cámara y precios aproximados de servicios de paga.</div>
+
+  <div class="callout">
+    <strong>Objetivo</strong>
+    <p>Permitir que, al subir un PDF/Word o capturar un documento con la cámara del celular, se extraiga el texto (OCR o parsing) y se almacene para que el buscador pueda encontrar documentos por <em>contenido</em> (ej. folio, oficio, nombres, números), no solo por el nombre del archivo.</p>
+  </div>
+
+  <h2>1) Opciones de Implementación (Librerías / Servicios)</h2>
+
+  <h3>1.1 Librerías (sin costo por uso)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Herramienta</th>
+        <th>Uso recomendado</th>
+        <th>Notas</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Tesseract.js</strong></td>
+        <td>OCR para imágenes (fotos) y PDFs escaneados (tras convertir páginas a imagen)</td>
+        <td>Funciona en Node.js y navegador. Precisión depende de calidad de imagen.</td>
+      </tr>
+      <tr>
+        <td><strong>pdf-parse</strong></td>
+        <td>Extraer texto de PDFs con texto embebido (no escaneados)</td>
+        <td>Mucho más rápido que OCR cuando el PDF ya trae texto seleccionable.</td>
+      </tr>
+      <tr>
+        <td><strong>mammoth</strong></td>
+        <td>Extraer texto de documentos Word <code>.docx</code></td>
+        <td>Bueno para obtener texto “crudo” sin depender de OCR.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>1.2 Servicios en la nube (mayor precisión / escalabilidad)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Servicio</th>
+        <th>Fortalezas</th>
+        <th>Casos típicos</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Google Cloud Vision API</strong></td>
+        <td>OCR general muy preciso, multi-idioma</td>
+        <td>Documentos variados con mala calidad o necesidad de buena precisión.</td>
+      </tr>
+      <tr>
+        <td><strong>AWS Textract</strong></td>
+        <td>Especializado en documentos; análisis de tablas y formularios</td>
+        <td>Formatos estructurados (tablas, formularios, campos clave).</td>
+      </tr>
+      <tr>
+        <td><strong>Azure Computer Vision (Read)</strong></td>
+        <td>Buena integración Microsoft; planes competitivos</td>
+        <td>Organizaciones ya alineadas a Azure o con alto volumen.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2) Flujo Recomendado (Conceptual)</h2>
+  <pre>
+Usuario sube PDF/Word o captura imagen
+  → Detectar tipo MIME
+    → PDF: intentar pdf-parse
+       → si no hay texto embebido: OCR (convertir a imagen por página)
+    → Word: mammoth
+    → Imagen (cámara): OCR directo con Tesseract
+  → Guardar texto extraído (y metadatos) en BD
+  → Buscador consulta por contenido (full-text recomendado)
+  </pre>
+
+  <h2>3) Uso de la Columna <code>meta_doc</code> (metadatos)</h2>
+  <p>Como ya existe <code>meta_doc</code>, una implementación práctica es guardar el contenido OCR dentro del JSON. Ejemplo:</p>
+  <pre>
+{
+  "texto_extraido": "...contenido extraído del documento...",
+  "fecha_ocr": "2026-01-23T15:00:00Z",
+  "metodo_extraccion": "pdf-parse" | "tesseract" | "mammoth",
+  "paginas_procesadas": 5,
+  "idioma": "es"
+}
+  </pre>
+
+  <div class="callout">
+    <strong>Ventajas de usar <code>meta_doc</code></strong>
+    <ul>
+      <li>Evita cambios de esquema (sin columnas nuevas).</li>
+      <li>Flexible: puedes agregar campos nuevos en el futuro.</li>
+      <li>PostgreSQL permite consultar JSON y crear índices para acelerar búsquedas.</li>
+    </ul>
+  </div>
+
+  <h2>4) Caso Especial: Subida desde Cámara del Celular</h2>
+  <p>Cuando el usuario toma una foto, el archivo llega como <strong>imagen</strong> (por ejemplo <code>image/jpeg</code>, <code>image/png</code>, <code>image/webp</code>).</p>
+  <p>En ese caso:</p>
+  <ul>
+    <li>La foto <strong>no</strong> pasa por <code>pdf-parse</code> ni por <code>mammoth</code>.</li>
+    <li>Se aplica OCR con <strong>Tesseract.js</strong> directamente sobre la imagen.</li>
+    <li>Se almacena el texto extraído en <code>meta_doc.texto_extraido</code> para búsqueda.</li>
+  </ul>
+
+  <h3>Factores que afectan la calidad del OCR en fotos</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Factor</th>
+        <th>Impacto</th>
+        <th>Recomendación</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Iluminación</td>
+        <td>Alto</td>
+        <td>Buena luz, evitar sombras fuertes.</td>
+      </tr>
+      <tr>
+        <td>Enfoque / nitidez</td>
+        <td>Alto</td>
+        <td>Evitar movimiento; tomar foto nítida.</td>
+      </tr>
+      <tr>
+        <td>Ángulo</td>
+        <td>Medio</td>
+        <td>Capturar lo más perpendicular posible.</td>
+      </tr>
+      <tr>
+        <td>Resolución / compresión</td>
+        <td>Medio</td>
+        <td>No comprimir demasiado; conservar detalle del texto.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5) Búsqueda por Contenido (BD)</h2>
+  <p>Para pocos documentos, una búsqueda simple puede funcionar. Para producción, es preferible <strong>búsqueda full-text</strong> (por ejemplo con PostgreSQL: <code>to_tsvector</code> + <code>tsquery</code> + índice GIN).</p>
+
+  <h2>6) Precios Aproximados de Servicios de Paga</h2>
+  <p class="small">Nota: los precios pueden variar por región, tipo de operación (texto vs formularios), y cambios del proveedor. Estos valores son <strong>aproximados</strong>.</p>
+
+  <h3>6.1 Google Cloud Vision API (OCR)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Volumen mensual</th>
+        <th>Precio por 1,000 unidades</th>
+        <th>Notas</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Primeras 1,000</td>
+        <td><strong>Gratis</strong></td>
+        <td>Usualmente 1 unidad = 1 imagen/página.</td>
+      </tr>
+      <tr>
+        <td>1,001 a 5,000,000</td>
+        <td><strong>$1.50 USD</strong></td>
+        <td>OCR general.</td>
+      </tr>
+      <tr>
+        <td>5,000,001+</td>
+        <td><strong>$0.60 USD</strong></td>
+        <td>Tarifa decreciente por volumen.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 AWS Textract</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Operación</th>
+        <th>Precio por 1,000 páginas</th>
+        <th>Notas</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Detect Text (texto básico)</td>
+        <td><strong>$1.50 USD</strong></td>
+        <td>Extracción de texto.</td>
+      </tr>
+      <tr>
+        <td>Analyze Document (tablas/formularios)</td>
+        <td><strong>$15.00 USD</strong></td>
+        <td>Más caro por análisis estructural.</td>
+      </tr>
+      <tr>
+        <td>Analyze Expense (recibos/facturas)</td>
+        <td><strong>$10.00 USD</strong></td>
+        <td>Enfocado en gastos.</td>
+      </tr>
+      <tr>
+        <td>Analyze ID (identificaciones)</td>
+        <td><strong>$10.00 USD</strong></td>
+        <td>Enfocado en IDs.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">Free tier típico: 1,000 páginas/mes gratis por 3 meses (puede variar).</p>
+
+  <h3>6.3 Azure Computer Vision (Read API)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Plan</th>
+        <th>Precio por 1,000 páginas</th>
+        <th>Notas</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Free</td>
+        <td><strong>5,000 transacciones/mes</strong></td>
+        <td>Límite mensual gratuito (según plan).</td>
+      </tr>
+      <tr>
+        <td>S1</td>
+        <td><strong>$1.00 USD</strong></td>
+        <td>Estándar.</td>
+      </tr>
+      <tr>
+        <td>S2</td>
+        <td><strong>$0.65 USD</strong></td>
+        <td>Mayor volumen.</td>
+      </tr>
+      <tr>
+        <td>S3</td>
+        <td><strong>$0.40 USD</strong></td>
+        <td>Enterprise / muy alto volumen.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7) Ejemplos de Costos Mensuales (Referencia rápida)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Volumen</th>
+        <th>Google Vision</th>
+        <th>AWS Textract (texto)</th>
+        <th>Azure Read</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>500 documentos/mes</td>
+        <td>~ $0 (si aplica free tier)</td>
+        <td>~ $0 (si aplica free tier inicial) / ~ $0.75</td>
+        <td>~ $0 (si aplica free tier)</td>
+      </tr>
+      <tr>
+        <td>5,000 documentos/mes</td>
+        <td>~ $6.00</td>
+        <td>~ $7.50</td>
+        <td>~ $5.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+  <p class="small">Cómo exportar a PDF: abre este archivo en tu navegador → <strong>Imprimir</strong> → <strong>Guardar como PDF</strong>.</p>
+</body>
+</html>
