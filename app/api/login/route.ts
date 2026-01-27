@@ -1,4 +1,3 @@
-// app/api/auth/login/route.ts (o la ruta que estés usando)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByCurp, createUserIfNotExists } from '@/lib/db';

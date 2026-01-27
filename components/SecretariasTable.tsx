@@ -69,47 +69,69 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
       </div>
       */}
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#0076aa] text-white">
+      <div className="overflow-x-auto shadow-md rounded-lg border border-gray-200">
+        <table className="w-full table-auto">
+          <thead className="bg-gradient-to-r from-[#0076aa] to-[#005a87] text-white">
             <tr>
-              <th className="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">ID</th>
-              <th className="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">NOMENCLATURA</th>
-              <th className="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Dependencias</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                ID
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                Nombre
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                Nomenclatura
+              </th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedSecretarias.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                  No hay secretarías registradas
+                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <span className="text-sm font-medium">No hay secretarías registradas</span>
+                  </div>
                 </td>
               </tr>
             ) : (
-              paginatedSecretarias.map((secretaria) => (
-                <tr key={secretaria.id_secretaria} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+              paginatedSecretarias.map((secretaria, index) => (
+                <tr
+                  key={secretaria.id_secretaria}
+                  className={`
+              hover:bg-blue-50 transition-colors duration-150 
+              ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+            `}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {secretaria.id_secretaria}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 text-base text-gray-700">
                     {secretaria.nombre_secretaria}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                    {secretaria.sec_nomcl || '-'}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      {secretaria.sec_nomcl || 'N/A'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <button
                       onClick={() => openModal(secretaria)}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#408740] to-[#00ae6f] text-white rounded-lg text-xs hover:opacity-90 transition-all shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-[#408740] focus:ring-opacity-50"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#408740] to-[#00ae6f] text-white rounded-lg text-sm font-medium hover:from-[#367335] hover:to-[#009960] transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#408740] focus:ring-offset-2"
+                      aria-label={`Ver dependencias de ${secretaria.nombre_secretaria}`}
                     >
                       <svg
                         className="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="1.5"
+                        strokeWidth="2"
                         viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
                       >
                         <path
                           strokeLinecap="round"
@@ -117,7 +139,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
                           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                         />
                       </svg>
-                      <span className="font-medium">Ver</span>
+                      <span>Ver Dependencias</span>
                     </button>
                   </td>
                 </tr>
@@ -129,94 +151,79 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
-          <div className="text-sm text-gray-600">
-            Página {currentPage} de {totalPages}
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 border-t border-gray-200 pt-4">
+          {/* Información de página */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium text-gray-900">Página {currentPage}</span>
+            <span>de</span>
+            <span className="font-medium text-gray-900">{totalPages}</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Controles de navegación */}
+          <nav className="flex items-center gap-2" aria-label="Paginación">
             {/* Botón Anterior */}
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-3 py-1 rounded text-sm ${currentPage === 1
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+              className={`
+          inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+          transition-all duration-200
+          ${currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm'
+                }
+        `}
+              aria-label="Página anterior"
             >
-              Anterior
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="hidden sm:inline">Anterior</span>
             </button>
 
             {/* Números de página */}
             <div className="flex items-center gap-1">
-              {/* Primera página */}
-              {currentPage > 2 && (
-                <>
-                  <button
-                    onClick={() => goToPage(1)}
-                    className="px-3 py-1 rounded text-sm bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  >
-                    1
-                  </button>
-                  {currentPage > 3 && <span className="px-1">...</span>}
-                </>
-              )}
-
-              {/* Páginas alrededor de la actual */}
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-
-                if (pageNum < 1 || pageNum > totalPages) return null;
-
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => goToPage(pageNum)}
-                    className={`px-3 py-1 rounded text-sm ${currentPage === pageNum
-                        ? 'bg-[#0076aa] text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-
-              {/* Última página */}
-              {currentPage < totalPages - 1 && (
-                <>
-                  {currentPage < totalPages - 2 && <span className="px-1">...</span>}
-                  <button
-                    onClick={() => goToPage(totalPages)}
-                    className="px-3 py-1 rounded text-sm bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  >
-                    {totalPages}
-                  </button>
-                </>
-              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => goToPage(pageNum)}
+                  disabled={currentPage === pageNum}
+                  className={`
+              min-w-[40px] h-[40px] rounded-lg text-sm font-medium
+              transition-all duration-200
+              ${currentPage === pageNum
+                      ? 'bg-gradient-to-r from-[#0076aa] to-[#005a87] text-white shadow-md cursor-default'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-[#0076aa] hover:text-[#0076aa]'
+                    }
+            `}
+                  aria-label={`Ir a página ${pageNum}`}
+                  aria-current={currentPage === pageNum ? 'page' : undefined}
+                >
+                  {pageNum}
+                </button>
+              ))}
             </div>
 
             {/* Botón Siguiente */}
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-3 py-1 rounded text-sm ${currentPage === totalPages
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+              className={`
+          inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+          transition-all duration-200
+          ${currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm'
+                }
+        `}
+              aria-label="Página siguiente"
             >
-              Siguiente
+              <span className="hidden sm:inline">Siguiente</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </button>
-          </div>
+          </nav>
         </div>
       )}
 

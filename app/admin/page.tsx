@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import ExitoFooter from '@/components/ExitoFooter';
-import AdminMenu from '@/components/AdminMenu';
-import AdminHeader from '@/components/AdminHeader';
+// import AdminMenu from '@/components/AdminMenu';
+// import AdminHeader from '@/components/AdminHeader';
+import HeaderAll from '@/components/HeaderAll';
 import UsersTable from '@/components/UsersTable';
 import PaginationControls from '@/components/PaginationControls';
 import LoadingState from '@/components/LoadingState';
@@ -211,17 +212,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#0b3b60] relative overflow-x-hidden">
-      <AdminMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-
-      <div
-        className={`flex flex-col min-h-screen w-full transition-transform duration-300 ease-in-out ${
-          isMenuOpen ? "translate-x-80" : "translate-x-0"
-        }`}
-      >
-        <AdminHeader 
-          isMenuOpen={isMenuOpen} 
-          onMenuToggle={() => setIsMenuOpen(!isMenuOpen)} 
-        />
+      <HeaderAll showMenuButton={true} />
 
         <main className="flex-1 p-4">
           <div className="max-w-7xl mx-auto">
@@ -430,6 +421,6 @@ export default function AdminPage() {
 
         <ExitoFooter />
       </div>
-    </div>
+    
   );
 }

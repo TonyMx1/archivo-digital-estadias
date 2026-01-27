@@ -163,7 +163,13 @@ export async function getUserInfoFromCUS(
   success: false;
   error: string;
 } | null> {
-  const INFO_API_URL = 'https://sanjuandelrio.gob.mx/tramites-sjr/Api/principal/info_general';
+  // Usar la misma URL validada que loginCUS
+  if (!CUS_API_URL) {
+    console.error('Error: CUS_API_URL no está configurada en las variables de entorno');
+    return null;
+  }
+
+  const INFO_API_URL = CUS_API_URL;
 
   // Crear AbortController con timeout de 30 segundos
   const controller = new AbortController();

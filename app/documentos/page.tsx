@@ -30,10 +30,92 @@ export default function DocumentosPage() {
   const [filtroEstatus, setFiltroEstatus] = useState("Activo");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Estado para alertas modales
+  const [alertModal, setAlertModal] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    isOpen: boolean;
+  }>({ message: '', type: 'info', isOpen: false });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    message: string;
+    isOpen: boolean;
+    onConfirm: () => void;
+  }>({ message: '', isOpen: false, onConfirm: () => {} });
+
+  const [promptModal, setPromptModal] = useState<{
+    message: string;
+    isOpen: boolean;
+    onConfirm: (value: string) => void;
+    defaultValue?: string;
+  }>({ message: '', isOpen: false, onConfirm: () => {}, defaultValue: '' });
+
+  // Función para mostrar alertas modales
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertModal({ message, type, isOpen: true });
+  };
+
+  // Función para mostrar confirmación
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmModal({ message, isOpen: true, onConfirm });
+  };
+
+  // Función para mostrar prompt
+  const showPrompt = (message: string, onConfirm: (value: string) => void, defaultValue = '') => {
+    setPromptModal({ message, isOpen: true, onConfirm, defaultValue });
+  };
+
+  // Función para cerrar alerta
+  const closeAlert = () => {
+    setAlertModal({ message: '', type: 'info', isOpen: false });
+  };
+
+  // Función para cerrar confirmación
+  const closeConfirm = () => {
+    setConfirmModal({ message: '', isOpen: false, onConfirm: () => {} });
+  };
+
+  // Función para cerrar prompt
+  const closePrompt = () => {
+    setPromptModal({ message: '', isOpen: false, onConfirm: () => {}, defaultValue: '' });
+  };
+
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const isViewer = currentUserRole === 10;
+
+  const getMetaDocSearchText = (metaDoc: any): string => {
+    if (!metaDoc) return "";
+    if (typeof metaDoc === "string") {
+      const raw = metaDoc;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          const textoExtraido = (parsed as any)?.texto_extraido;
+          return typeof textoExtraido === "string" && textoExtraido.trim()
+            ? `${textoExtraido} ${JSON.stringify(parsed)}`
+            : JSON.stringify(parsed);
+        }
+      } catch {
+        return raw;
+      }
+      return raw;
+    }
+
+    if (typeof metaDoc === "object") {
+      try {
+        const textoExtraido = (metaDoc as any)?.texto_extraido;
+        return typeof textoExtraido === "string" && textoExtraido.trim()
+          ? `${textoExtraido} ${JSON.stringify(metaDoc)}`
+          : JSON.stringify(metaDoc);
+      } catch {
+        return "";
+      }
+    }
+
+    return String(metaDoc);
+  };
 
   // Cargar tipos de documento
   useEffect(() => {
@@ -88,13 +170,15 @@ export default function DocumentosPage() {
   const documentosFiltrados = documentos.filter((doc) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
+    const metaText = getMetaDocSearchText((doc as any).meta_doc).toLowerCase();
     return (
       doc.nombre_doc?.toLowerCase().includes(query) ||
       doc.nombre_tipo_documento?.toLowerCase().includes(query) ||
       doc.nombre_secretaria?.toLowerCase().includes(query) ||
       doc.anio_doc?.includes(query) ||
       doc.oficio_doc?.toLowerCase().includes(query) ||
-      doc.expediente_doc?.toLowerCase().includes(query)
+      doc.expediente_doc?.toLowerCase().includes(query) ||
+      metaText.includes(query)
     );
   });
 
@@ -115,18 +199,23 @@ export default function DocumentosPage() {
   };
 
   const handleEliminarDocumento = async (idDoc: number) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este documento?")) {
-      return;
-    }
+    showConfirm(
+      "¿Estás seguro de que deseas eliminar este documento?",
+      () => {
+        showPrompt(
+          "Ingrese el motivo de la baja (opcional):",
+          async (motivoBaja) => {
+            const result = await eliminarDocumento(idDoc, motivoBaja || undefined);
 
-    const motivoBaja = prompt("Ingrese el motivo de la baja (opcional):");
-    const result = await eliminarDocumento(idDoc, motivoBaja || undefined);
-
-    if (result.success) {
-      alert("Documento eliminado exitosamente");
-    } else {
-      alert(result.error || "Error al eliminar documento");
-    }
+            if (result.success) {
+              showAlert("Documento eliminado exitosamente", "success");
+            } else {
+              showAlert(result.error || "Error al eliminar documento", "error");
+            }
+          }
+        );
+      }
+    );
   };
 
   const handleCloseModal = () => {
@@ -365,8 +454,8 @@ export default function DocumentosPage() {
 
           {/* Grid de tarjetas de documentos */}
           <div className="bg-white rounded-3xl shadow-xl p-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -382,14 +471,18 @@ export default function DocumentosPage() {
                     <path d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z" />
                   </svg>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">DOCUMENTOS</h2>
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-900 break-words">DOCUMENTOS</h2>
                   {/* <p className="text-gray-600 text-sm">Gestión documental del sistema</p> */}
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold text-gray-900">{documentosFiltrados.length} documentos</p>
-                <p className="text-sm text-gray-600">Mostrando {documentosPaginados.length} por página</p>
+              <div className="text-left sm:text-right">
+                <p className="text-lg font-semibold text-gray-900">
+                  {documentosFiltrados.length} documentos
+                </p>
+                <p className="text-sm text-gray-600">
+                  Mostrando {documentosPaginados.length} por página
+                </p>
               </div>
             </div>
 
@@ -678,11 +771,149 @@ export default function DocumentosPage() {
 
       <ExitoFooter />
 
+      {/* Modal de alertas */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              {alertModal.type === 'success' && (
+                <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-full">
+                  <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+              {alertModal.type === 'error' && (
+                <div className="w-12 h-12 flex items-center justify-center bg-red-100 rounded-full">
+                  <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+              {alertModal.type === 'info' && (
+                <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-full">
+                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+              <div>
+                <h3 className={`text-lg font-semibold ${
+                  alertModal.type === 'success' ? 'text-green-800' :
+                  alertModal.type === 'error' ? 'text-red-800' : 'text-blue-800'
+                }`}>
+                  {alertModal.type === 'success' ? 'Éxito' :
+                   alertModal.type === 'error' ? 'Error' : 'Información'}
+                </h3>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">{alertModal.message}</p>
+            <button
+              onClick={closeAlert}
+              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 flex items-center justify-center bg-yellow-100 rounded-full">
+                <svg className="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-800">Confirmar eliminación</h3>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={closeConfirm}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  closeConfirm();
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de entrada de texto (prompt) */}
+      {promptModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-full">
+                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-blue-800">Entrada de datos</h3>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-4">{promptModal.message}</p>
+            <input
+              type="text"
+              defaultValue={promptModal.defaultValue}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const input = e.target as HTMLInputElement;
+                  promptModal.onConfirm(input.value);
+                  closePrompt();
+                }
+              }}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={closePrompt}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  const input = document.querySelector('input') as HTMLInputElement;
+                  promptModal.onConfirm(input.value);
+                  closePrompt();
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de documentos */}
       <DocumentosModal
         isOpen={modalOpen}
         onClose={handleCloseModal}
         onSuccess={handleDocumentoGuardado}
+        onShowAlert={showAlert}
         documento={editingDocumento}
         isEditing={!!editingDocumento}
         isReadOnly={isViewer}

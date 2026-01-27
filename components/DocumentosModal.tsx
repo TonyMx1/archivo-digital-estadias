@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
 import { useSecretarias } from "@/hooks/useSecretarias";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
 
 interface TipoDocumento {
   id_documento: number;
@@ -14,6 +20,7 @@ interface DocumentosModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onShowAlert?: (message: string, type: 'success' | 'error' | 'info') => void;
   documento?: Documento | null;
   isEditing?: boolean;
   isReadOnly?: boolean;
@@ -23,6 +30,7 @@ export default function DocumentosModal({
   isOpen,
   onClose,
   onSuccess,
+  onShowAlert,
   documento,
   isEditing = false,
   isReadOnly = false,
@@ -33,6 +41,7 @@ export default function DocumentosModal({
   const [loadingTipos, setLoadingTipos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Estados del formulario
   const [nombreDoc, setNombreDoc] = useState("");
@@ -174,13 +183,14 @@ export default function DocumentosModal({
     e.preventDefault();
 
     // PASO 1: Validar campos requeridos
-    if (!nombreDoc.trim() || !tipoDoc || !idSecre) {
-      alert("Por favor completa los campos requeridos: Nombre, Tipo de documento y Secretaría");
+    if (!nombreDoc.trim() || !tipoDoc || !idSecre || !fechaDoc) {
+      onShowAlert?.("Por favor completa los campos requeridos: Nombre, Tipo de documento, Secretaría y Fecha del documento", "error");
       return;
     }
 
     setIsSubmitting(true);
     let finalUrlConsDoc = urlConsDoc;
+    let metaDocFinal: string | undefined = metaDoc.trim() || undefined;
 
     // PASO 2: Si hay un archivo, subirlo primero usando nuestra función
     if (archivo) {
@@ -205,9 +215,52 @@ export default function DocumentosModal({
           throw new Error(uploadResult.error || 'Error al subir archivo');
         }
 
+        try {
+          const ocrForm = new FormData();
+          ocrForm.append('archivo', archivo, archivo.name);
+
+          const ocrResponse = await fetch('/api/ocr', {
+            method: 'POST',
+            body: ocrForm,
+          });
+
+          if (ocrResponse.ok) {
+            const ocrData = await ocrResponse.json();
+            if (ocrData?.success && typeof ocrData?.texto_extraido === 'string') {
+              let metaObj: any = {};
+              const raw = metaDoc.trim();
+
+              if (raw) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (parsed && typeof parsed === 'object') {
+                    metaObj = parsed;
+                  } else {
+                    metaObj = { meta_usuario: raw };
+                  }
+                } catch {
+                  metaObj = { meta_usuario: raw };
+                }
+              }
+
+              metaObj.texto_extraido = ocrData.texto_extraido;
+              metaObj.fecha_ocr = new Date().toISOString();
+              metaObj.metodo_extraccion = ocrData.metodo;
+              metaObj.nombre_archivo = archivo.name;
+              metaObj.tipo_mime = archivo.type;
+              metaObj.url_cons_doc = finalUrlConsDoc;
+
+              metaDocFinal = JSON.stringify(metaObj);
+              setMetaDoc(metaDocFinal);
+            }
+          }
+        } catch (error: any) {
+          console.error('❌ Error al extraer OCR:', error);
+        }
+
       } catch (error: any) {
         console.error("❌ Error al subir archivo:", error);
-        alert("Error al subir el archivo físico: " + error.message);
+        onShowAlert?.("Error al subir el archivo físico: " + error.message, "error");
         setIsSubmitting(false);
         return; // Detener el proceso si falla la subida
       }
@@ -223,7 +276,7 @@ export default function DocumentosModal({
         : (sizeDoc.trim() || undefined),
       anio_doc: anioDoc.trim() || undefined,
       comentario_doc: comentarioDoc.trim() || undefined,
-      meta_doc: metaDoc.trim() || undefined,
+      meta_doc: metaDocFinal,
       desc_doc: descDoc.trim() || undefined,
       oficio_doc: oficioDoc.trim() || undefined,
       expediente_doc: expedienteDoc.trim() || undefined,
@@ -252,7 +305,7 @@ export default function DocumentosModal({
 
       // PASO 5: Mostrar resultado
       if (result.success) {
-        alert(isEditing ? "Documento actualizado exitosamente" : "Documento creado exitosamente");
+        onShowAlert?.(isEditing ? "Documento actualizado exitosamente" : "Documento creado exitosamente", "success");
 
         // ✅ Llamar a onSuccess ANTES de cerrar
         if (onSuccess) {
@@ -261,11 +314,11 @@ export default function DocumentosModal({
 
         onClose();
       } else {
-        alert(result.error || `Error al ${isEditing ? 'actualizar' : 'crear'} documento`);
+        onShowAlert?.(result.error || `Error al ${isEditing ? 'actualizar' : 'crear'} documento`, "error");
       }
     } catch (error: any) {
       console.error("❌ Error al guardar documento:", error);
-      alert("Error al guardar el documento: " + error.message);
+      onShowAlert?.("Error al guardar el documento: " + error.message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -275,9 +328,9 @@ export default function DocumentosModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
       <div
-        className={`bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all duration-200 ease-out ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        className={`bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all duration-200 ease-out overflow-hidden ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
       >
         {/* Header del modal */}
@@ -317,7 +370,7 @@ export default function DocumentosModal({
         </div>
 
         {/* Contenido del modal */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campos principales */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -381,15 +434,70 @@ export default function DocumentosModal({
               {/* Fecha del documento */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha del documento
+                  Fecha del documento <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={fechaDoc}
-                  onChange={(e) => setFechaDoc(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  disabled={isSubmitting}
-                />
+
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0076aa] disabled:bg-gray-100"
+                    >
+                      <span>
+                        {(() => {
+                          if (!fechaDoc) return "DD/MM/AAAA";
+                          try {
+                            const date = new Date(fechaDoc + 'T00:00:00');
+                            // Verificar si la fecha es válida
+                            if (isNaN(date.getTime())) return "DD/MM/AAAA";
+                            return format(date, "dd/MM/yyyy", { locale: es });
+                          } catch {
+                            return "DD/MM/AAAA";
+                          }
+                        })()}
+                      </span>
+                      <CalendarIcon className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="p-0 border-0 shadow-lg z-50">
+                    <Calendar
+                      mode="single"
+                      selected={(() => {
+                        if (!fechaDoc) return undefined;
+                        try {
+                          const date = new Date(fechaDoc + 'T00:00:00');
+                          return isNaN(date.getTime()) ? undefined : date;
+                        } catch {
+                          return undefined;
+                        }
+                      })()}
+                      onSelect={(date) => {
+                        if (!date) {
+                          setFechaDoc("");
+                          setIsCalendarOpen(false);
+                          return;
+                        }
+
+                        // Extrae año, mes y día sin conversión UTC
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const iso = `${year}-${month}-${day}`;
+
+                        setFechaDoc(iso);
+                        setIsCalendarOpen(false); // Cierra el calendario
+                      }}
+                      locale={es}
+                      initialFocus
+                      classNames={{
+                        day_selected: "bg-[#0076aa] text-white hover:bg-[#005a85] hover:text-white focus:bg-[#0076aa] focus:text-white",
+                        day_today: "bg-gray-100 text-gray-900 font-semibold",
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -632,8 +740,8 @@ export default function DocumentosModal({
 
               {archivo && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-800">{archivo.name}</p>
                       <p className="text-sm text-gray-500">
                         Tamaño: {(archivo.size / 1024).toFixed(2)} KB
@@ -642,10 +750,10 @@ export default function DocumentosModal({
                     <button
                       type="button"
                       onClick={removeFile}
-                      className="ml-4 px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                      className="flex-shrink-0 px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm"
                       disabled={isSubmitting}
                     >
-                      ✕
+                      ❌
                     </button>
                   </div>
 

@@ -4,16 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import HomeHeader from "@/components/HomeHeader";
 import ExitoFooter from "@/components/ExitoFooter";
+import HeaderAll from "@/components/HeaderAll";
 
 export default function HomePage() {
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<number | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [roleName, setRoleName] = useState<string | null>(null);
 
   // Estado para estadísticas
   const [statistics, setStatistics] = useState({
@@ -35,8 +31,6 @@ export default function HomePage() {
           if (data.success) {
             const role = data.user.id_rol;
             setUserRole(role);
-            setUserName(data.user.nombre_usuario);
-            setRoleName(data.user.nombre_rol);
 
             if (role === 9) {
               router.push('/visitante');
@@ -72,234 +66,9 @@ export default function HomePage() {
     fetchStatistics();
   }, []);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      const response = await fetch("/api/logout", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        router.push("/login");
-      } else {
-        alert("Error al cerrar sesión");
-        setIsLoggingOut(false);
-      }
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-      alert("Error al cerrar sesión");
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-[#0b3b60]">
-      <HomeHeader
-        isMenuOpen={isMenuOpen}
-        onToggleMenu={() => setIsMenuOpen(!isMenuOpen)}
-      />
-
-      {/* Overlay para cerrar el menú al hacer clic fuera */}
-      {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
-          onClick={() => setIsMenuOpen(false)}
-        />
-      )}
-
-      {/* Menú lateral deslizante desde la izquierda */}
-      <div
-        className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-[#0076aa] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-      >
-        <div className="flex flex-col h-full p-6 overflow-y-auto">
-          {/* Encabezado del menú */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white">Menú</h2>
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors"
-              aria-label="Cerrar menú"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* Contenido del menú */}
-          <div className="flex-1">
-            {/* Botón para acceder a Documentos */}
-            <div className="mb-6">
-              <Link
-                href="/documentos"
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-2 w-full px-4 py-2 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094d73] focus:outline-none focus:ring-2 focus:ring-[#00b2e2] focus:ring-offset-2 transition-all shadow-lg text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Documentos</span>
-              </Link>
-            </div>
-
-            {/* Enlace de administración (solo para administrador o superusuario) */}
-            {(userRole === 1 || userRole === 2) && (
-              <div className="mb-6">
-                <Link
-                  href="/admin"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 w-full px-4 py-2 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094d73] focus:outline-none focus:ring-2 focus:ring-[#00b2e2] focus:ring-offset-2 transition-all shadow-lg text-sm"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-4 h-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
-                    />
-                  </svg>
-                  <span>Administración</span>
-                </Link>
-              </div>
-            )}
-
-            <div className="mb-6">
-              <Link
-                href="/secretarias"
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-2 w-full px-4 py-2 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094d73] focus:outline-none focus:ring-2 focus:ring-[#00b2e2] focus:ring-offset-2 transition-all shadow-lg text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"
-                  />
-                </svg>
-                <span>Secretarías</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Información del usuario y botón de cerrar sesión al final del menú */}
-          <div className="border-t border-[#005a85] pt-4 mt-auto">
-            {/* Información del usuario */}
-            {(userName || roleName) && (
-              <div className="mb-4 pb-4 border-b border-[#005a85]">
-                {userName && (
-                  <div className="flex flex-row items-center gap-2 mb-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      className="w-7 h-7 text-white flex-shrink-0"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                      />
-                    </svg>
-                    <p className="text-white font-medium text-sm">
-                      {userName}
-                    </p>
-                  </div>
-                )}
-                {roleName && (
-                  <p className="text-white/70 text-sm pl-7">{roleName}</p>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-            >
-              {isLoggingOut ? (
-                <>
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>Cerrando...</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  <span>Cerrar sesión</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+      <HeaderAll showMenuButton={true} showBackButton={false} />
 
       {/* Contenido principal */}
       <main className="flex-1 bg-[#0b3b60] p-4 pb-0">
