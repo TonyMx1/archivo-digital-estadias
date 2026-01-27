@@ -8,9 +8,9 @@ export default function ExitoFooter() {
         <div className="flex items-center justify-center gap-4">
 
           {/* Imagen */}
-          <div className="w-[70px] sm:w-[80px]">
+          <div className="w-[60px] sm:w-[70px]">
             <Image
-              src="/legado.png"
+              src="/logo_white.png"
               alt="Legado"
               width={300}
               height={300}
@@ -25,7 +25,7 @@ export default function ExitoFooter() {
           {/* Texto */}
           <div>
             <p className="text-white/90 text-sm sm:text-base">
-              Sistema de gestión de archivos digitales
+              Sistema de Archivo para la Administración Municipal
             </p>
             {/* <p className="text-white/60 text-xs">
               Archivos Digitales

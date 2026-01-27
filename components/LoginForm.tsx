@@ -40,7 +40,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             <h1 className="text-3xl font-bold text-[#0b3b60]">Archivo Digital</h1>
           </div>
           <p className="text-md text-gray-500">
-            Ingresa con tu CURP y contraseña del sistema
+            
           </p>
         </div>
 
@@ -203,8 +203,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       </div>
 
       <LoginAndVisitanteFooter />
-
-      
       
     </div>
   );

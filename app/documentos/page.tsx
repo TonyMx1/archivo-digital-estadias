@@ -365,8 +365,8 @@ export default function DocumentosPage() {
 
           {/* Grid de tarjetas de documentos */}
           <div className="bg-white rounded-3xl shadow-xl p-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -382,14 +382,18 @@ export default function DocumentosPage() {
                     <path d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z" />
                   </svg>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">DOCUMENTOS</h2>
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-900 break-words">DOCUMENTOS</h2>
                   {/* <p className="text-gray-600 text-sm">Gestión documental del sistema</p> */}
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold text-gray-900">{documentosFiltrados.length} documentos</p>
-                <p className="text-sm text-gray-600">Mostrando {documentosPaginados.length} por página</p>
+              <div className="text-left sm:text-right">
+                <p className="text-lg font-semibold text-gray-900">
+                  {documentosFiltrados.length} documentos
+                </p>
+                <p className="text-sm text-gray-600">
+                  Mostrando {documentosPaginados.length} por página
+                </p>
               </div>
             </div>
 

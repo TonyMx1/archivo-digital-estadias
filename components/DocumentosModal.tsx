@@ -181,6 +181,7 @@ export default function DocumentosModal({
 
     setIsSubmitting(true);
     let finalUrlConsDoc = urlConsDoc;
+    let metaDocFinal: string | undefined = metaDoc.trim() || undefined;
 
     // PASO 2: Si hay un archivo, subirlo primero usando nuestra función
     if (archivo) {
@@ -205,6 +206,49 @@ export default function DocumentosModal({
           throw new Error(uploadResult.error || 'Error al subir archivo');
         }
 
+        try {
+          const ocrForm = new FormData();
+          ocrForm.append('archivo', archivo, archivo.name);
+
+          const ocrResponse = await fetch('/api/ocr', {
+            method: 'POST',
+            body: ocrForm,
+          });
+
+          if (ocrResponse.ok) {
+            const ocrData = await ocrResponse.json();
+            if (ocrData?.success && typeof ocrData?.texto_extraido === 'string') {
+              let metaObj: any = {};
+              const raw = metaDoc.trim();
+
+              if (raw) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (parsed && typeof parsed === 'object') {
+                    metaObj = parsed;
+                  } else {
+                    metaObj = { meta_usuario: raw };
+                  }
+                } catch {
+                  metaObj = { meta_usuario: raw };
+                }
+              }
+
+              metaObj.texto_extraido = ocrData.texto_extraido;
+              metaObj.fecha_ocr = new Date().toISOString();
+              metaObj.metodo_extraccion = ocrData.metodo;
+              metaObj.nombre_archivo = archivo.name;
+              metaObj.tipo_mime = archivo.type;
+              metaObj.url_cons_doc = finalUrlConsDoc;
+
+              metaDocFinal = JSON.stringify(metaObj);
+              setMetaDoc(metaDocFinal);
+            }
+          }
+        } catch (error: any) {
+          console.error('❌ Error al extraer OCR:', error);
+        }
+
       } catch (error: any) {
         console.error("❌ Error al subir archivo:", error);
         alert("Error al subir el archivo físico: " + error.message);
@@ -223,7 +267,7 @@ export default function DocumentosModal({
         : (sizeDoc.trim() || undefined),
       anio_doc: anioDoc.trim() || undefined,
       comentario_doc: comentarioDoc.trim() || undefined,
-      meta_doc: metaDoc.trim() || undefined,
+      meta_doc: metaDocFinal,
       desc_doc: descDoc.trim() || undefined,
       oficio_doc: oficioDoc.trim() || undefined,
       expediente_doc: expedienteDoc.trim() || undefined,
@@ -277,7 +321,7 @@ export default function DocumentosModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
       <div
-        className={`bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all duration-200 ease-out ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        className={`bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all duration-200 ease-out overflow-hidden ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
       >
         {/* Header del modal */}
@@ -317,7 +361,7 @@ export default function DocumentosModal({
         </div>
 
         {/* Contenido del modal */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campos principales */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -632,8 +676,8 @@ export default function DocumentosModal({
 
               {archivo && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-800">{archivo.name}</p>
                       <p className="text-sm text-gray-500">
                         Tamaño: {(archivo.size / 1024).toFixed(2)} KB
@@ -642,10 +686,10 @@ export default function DocumentosModal({
                     <button
                       type="button"
                       onClick={removeFile}
-                      className="ml-4 px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                      className="flex-shrink-0 px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm"
                       disabled={isSubmitting}
                     >
-                      ✕
+                      ❌
                     </button>
                   </div>
 
