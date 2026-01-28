@@ -5,9 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
 import { useSecretarias } from "@/hooks/useSecretarias";
-import ExitoFooter from "@/components/ExitoFooter";
+import { PERMISOS } from "@/lib/permisos";
 import DocumentosModal from "@/components/DocumentosModal";
 import HeaderAll from "@/components/HeaderAll";
+import ExitoFooter from "@/components/ExitoFooter";
 
 interface TipoDocumento {
   id_documento: number;
@@ -18,6 +19,7 @@ export default function DocumentosPage() {
   const { documentos, loading, error, fetchDocumentos, eliminarDocumento } = useDocumentos();
   const { secretarias } = useSecretarias();
   const [currentUserRole, setCurrentUserRole] = useState<number | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
@@ -83,7 +85,12 @@ export default function DocumentosPage() {
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-  const isViewer = currentUserRole === 10;
+  const canEliminarDocumentos = userPermissions.includes(PERMISOS.ELIMINAR_DOCUMENTOS);
+  const canEditarDocumentos = userPermissions.includes(PERMISOS.EDITAR_DOCUMENTOS);
+  const canCrearDocumentos = userPermissions.includes(PERMISOS.CREAR_DOCUMENTOS);
+  
+  // Para el modal: si está editando, necesita permiso de editar. Si está creando, necesita permiso de crear
+  const canEditCurrentDocument = editingDocumento ? canEditarDocumentos : canCrearDocumentos;
 
   const getMetaDocSearchText = (metaDoc: any): string => {
     if (!metaDoc) return "";
@@ -136,22 +143,33 @@ export default function DocumentosPage() {
     loadTiposDocumento();
   }, []);
 
-  // Cargar rol del usuario actual
+  // Cargar rol y permisos del usuario actual
   useEffect(() => {
-    const loadUserRole = async () => {
+    const loadUserRoleAndPermissions = async () => {
       try {
         const response = await fetch("/api/user");
         if (!response.ok) return;
         const data = await response.json();
         if (data.success) {
           setCurrentUserRole(data.user.id_rol);
+          
+          // Cargar permisos del usuario
+          const permisosResponse = await fetch("/api/user/permisos");
+          if (permisosResponse.ok) {
+            const permisosData = await permisosResponse.json();
+            if (permisosData.success) {
+              setUserPermissions(permisosData.permisos || []);
+              console.log('✅ Permisos cargados:', permisosData.permisos);
+              console.log('✅ Puede crear documentos:', permisosData.permisos?.includes(PERMISOS.CREAR_DOCUMENTOS));
+            }
+          }
         }
       } catch (error) {
-        console.error("Error al obtener rol de usuario:", error);
+        console.error("Error al obtener rol y permisos de usuario:", error);
       }
     };
 
-    loadUserRole();
+    loadUserRoleAndPermissions();
   }, []);
 
   // Cargar documentos
@@ -335,7 +353,7 @@ export default function DocumentosPage() {
               </button>
 
               {/* Botón Nuevo documento */}
-              {!isViewer && (
+              {canCrearDocumentos && (
                 <button
                   onClick={handleNuevoDocumento}
                   className="px-4 py-2 bg-gradient-to-r from-[#00ae6f] to-[#408740] text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-[#408740]/30 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 whitespace-nowrap"
@@ -624,30 +642,33 @@ export default function DocumentosPage() {
                         </button>
 
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditarDocumento(documento)}
-                            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Editar"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                          {canEditarDocumentos && (
+                            <button
+                              onClick={() => handleEditarDocumento(documento)}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Editar"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => documento.id_doc && handleEliminarDocumento(documento.id_doc)}
-                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Eliminar"
-                          >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                          {canEliminarDocumentos && (
+                            <button
+                              onClick={() => documento.id_doc && handleEliminarDocumento(documento.id_doc)}
+                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Eliminar"
+                            >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               fill="none"
@@ -662,7 +683,8 @@ export default function DocumentosPage() {
                                 d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
                               />
                             </svg>
-                          </button>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -916,7 +938,7 @@ export default function DocumentosPage() {
         onShowAlert={showAlert}
         documento={editingDocumento}
         isEditing={!!editingDocumento}
-        isReadOnly={isViewer}
+        isReadOnly={!canEditCurrentDocument}
       />
     </div>
   );

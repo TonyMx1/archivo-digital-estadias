@@ -5,7 +5,9 @@ import {
   createDependencia,
   toggleEstadoDependencia,
   updateDependencia,
+  hasPermission,
 } from '@/lib/db';
+import { PERMISOS } from '@/lib/permisos';
 
 // Obtener dependencias de una secretaría
 export async function GET(request: NextRequest) {
@@ -62,10 +64,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rol visor (10) solo puede consultar, no actualizar
-    if (payload.id_rol === 10) {
+    // Verificar permiso para crear dependencias
+    const canCreate = await hasPermission(payload.id_rol, PERMISOS.CREAR_DEPENDENCIAS);
+    if (!canCreate) {
       return NextResponse.json(
-        { error: 'No tienes permisos para actualizar dependencias' },
+        { error: 'No tienes permisos para crear dependencias' },
         { status: 403 }
       );
     }
