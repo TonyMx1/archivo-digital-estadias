@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { toggleEstadoDependencia } from '@/lib/db';
+import { toggleEstadoDependencia, hasPermission } from '@/lib/db';
+import { PERMISOS } from '@/lib/permisos';
 
 type Params = { id: string };
 
@@ -25,6 +26,15 @@ export async function PATCH(
       return NextResponse.json(
         { error: 'Token inválido' },
         { status: 401 }
+      );
+    }
+
+    // Verificar permiso para desactivar dependencias
+    const canToggle = await hasPermission(payload.id_rol, PERMISOS.DESACTIVAR_DEPENDENCIAS);
+    if (!canToggle) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para desactivar dependencias' },
+        { status: 403 }
       );
     }
 

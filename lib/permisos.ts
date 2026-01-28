@@ -6,7 +6,7 @@ export const PERMISOS = {
   VER_DOCUMENTOS: 'ver_documentos',
   VER_SECRETARIAS: 'ver_secretarias',
   VER_DEPENDENCIAS: 'ver_dependencias',
-  VER_USUARIOS: 'ver_usuarios',
+  // VER_USUARIOS: 'ver_usuarios',
   VER_ADMIN: 'ver_admin',
   
   // Permisos de edición
@@ -17,7 +17,7 @@ export const PERMISOS = {
   // Permisos de creación
   CREAR_DOCUMENTOS: 'crear_documentos',
   CREAR_DEPENDENCIAS: 'crear_dependencias',
-  CREAR_USUARIOS: 'crear_usuarios',
+  // CREAR_USUARIOS: 'crear_usuarios',
   
   // Permisos de eliminación/desactivación
   ELIMINAR_DOCUMENTOS: 'eliminar_documentos',
@@ -25,9 +25,9 @@ export const PERMISOS = {
   ELIMINAR_USUARIOS: 'eliminar_usuarios',
   
   // Permisos especiales
-  SUBIR_ARCHIVOS: 'subir_archivos',
-  DESCARGAR_ARCHIVOS: 'descargar_archivos',
-  ADMIN_TOTAL: 'admin_total',
+  // SUBIR_ARCHIVOS: 'subir_archivos',
+  // DESCARGAR_ARCHIVOS: 'descargar_archivos',
+  ADMIN_TOTAL: 'admin_total'
 } as const;
 
 export type PermisoKey = keyof typeof PERMISOS;
@@ -46,7 +46,7 @@ export const GRUPOS_PERMISOS = {
     PERMISOS.VER_DEPENDENCIAS,
     PERMISOS.EDITAR_DOCUMENTOS,
     PERMISOS.CREAR_DOCUMENTOS,
-    PERMISOS.DESCARGAR_ARCHIVOS,
+    // PERMISOS.DESCARGAR_ARCHIVOS,
   ],
   ADMIN: [
     PERMISOS.ADMIN_TOTAL,
