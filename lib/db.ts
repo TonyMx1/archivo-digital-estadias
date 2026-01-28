@@ -635,6 +635,21 @@ export async function getRolePermissions(idRol: number): Promise<string[]> {
 export async function hasPermission(idRol: number, nombrePermiso: string): Promise<boolean> {
   try {
     const pool = getPool();
+    
+    // Primero verificar si tiene ADMIN_TOTAL (acceso total)
+    const adminResult = await pool.query(
+      `SELECT 1 FROM rol_permisos
+       WHERE id_rol = $1 AND nombre_permiso = 'admin_total'
+       LIMIT 1`,
+      [idRol]
+    );
+    
+    // Si tiene ADMIN_TOTAL, tiene acceso a todo
+    if (adminResult.rows.length > 0) {
+      return true;
+    }
+    
+    // Si no tiene ADMIN_TOTAL, verificar el permiso específico
     const result = await pool.query(
       `SELECT 1 FROM rol_permisos
        WHERE id_rol = $1 AND nombre_permiso = $2

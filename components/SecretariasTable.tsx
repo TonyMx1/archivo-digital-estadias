@@ -83,7 +83,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
                 Nomenclatura
               </th>
               <th scope="col" className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
-                Acciones
+                VER
               </th>
             </tr>
           </thead>

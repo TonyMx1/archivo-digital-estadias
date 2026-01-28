@@ -37,6 +37,43 @@ export default function DependenciasModal({
     useState<Dependencia | null>(null);
   const [editNombre, setEditNombre] = useState("");
   const [editNomenclatura, setEditNomenclatura] = useState("");
+
+  // Estados para modales
+  const [alertModal, setAlertModal] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    isOpen: boolean;
+  }>({ message: '', type: 'info', isOpen: false });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    message: string;
+    isOpen: boolean;
+    onConfirm: () => void;
+  }>({ message: '', isOpen: false, onConfirm: () => { } });
+
+  // Estados para animación de modales
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+
+  // Animación para modal de alerta
+  useEffect(() => {
+    if (alertModal.isOpen) {
+      const frame = requestAnimationFrame(() => setAlertVisible(true));
+      return () => cancelAnimationFrame(frame);
+    } else {
+      setAlertVisible(false);
+    }
+  }, [alertModal.isOpen]);
+
+  // Animación para modal de confirmación
+  useEffect(() => {
+    if (confirmModal.isOpen) {
+      const frame = requestAnimationFrame(() => setConfirmVisible(true));
+      return () => cancelAnimationFrame(frame);
+    } else {
+      setConfirmVisible(false);
+    }
+  }, [confirmModal.isOpen]);
   
   // Usar el nuevo sistema de permisos
   const { hasPermission, loading: loadingPermisos } = usePermisos();
@@ -61,11 +98,28 @@ export default function DependenciasModal({
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
+  // Funciones para manejar modales
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertModal({ message, type, isOpen: true });
+  };
+
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmModal({ message, isOpen: true, onConfirm });
+  };
+
+  const closeAlert = () => {
+    setAlertModal({ message: '', type: 'info', isOpen: false });
+  };
+
+  const closeConfirm = () => {
+    setConfirmModal({ message: '', isOpen: false, onConfirm: () => { } });
+  };
+
 
   const handleAgregar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombreDependencia.trim() || !nomenclaturaDependencia.trim()) {
-      alert("Por favor ingresa nombre y nomenclatura de la dependencia");
+      showAlert("Por favor ingresa nombre y nomenclatura de la dependencia", "error");
       return;
     }
 
@@ -80,9 +134,9 @@ export default function DependenciasModal({
       setNombreDependencia("");
       setNomenclaturaDependencia("");
       setShowAddForm(false);
-      alert("Dependencia agregada exitosamente");
+      showAlert("Dependencia agregada exitosamente", "success");
     } else {
-      alert(result.error || "Error al agregar dependencia");
+      showAlert(result.error || "Error al agregar dependencia", "error");
     }
     setIsSubmitting(false);
   };
@@ -99,7 +153,7 @@ export default function DependenciasModal({
       return;
     }
     if (!editNombre.trim() || !editNomenclatura.trim()) {
-      alert("Por favor ingresa nombre y nomenclatura de la dependencia");
+      showAlert("Por favor ingresa nombre y nomenclatura de la dependencia", "error");
       return;
     }
 
@@ -114,26 +168,27 @@ export default function DependenciasModal({
       setEditingDependencia(null);
       setEditNombre("");
       setEditNomenclatura("");
-      alert("Dependencia actualizada exitosamente");
+      showAlert("Dependencia actualizada exitosamente", "success");
     } else {
-      alert(result.error || "Error al actualizar dependencia");
+      showAlert(result.error || "Error al actualizar dependencia", "error");
     }
     setIsSubmitting(false);
   };
 
   const handleToggleEstado = async (idDependencia: number, activoActual: boolean) => {
     const accion = activoActual ? 'desactivar' : 'activar';
-    if (!confirm(`¿Estás seguro de que deseas ${accion} esta dependencia?`)) {
-      return;
-    }
-
-    const nuevoEstado = !activoActual;
-    const result = await toggleEstadoDependencia(idDependencia, nuevoEstado);
-    if (result.success) {
-      alert(`Dependencia ${nuevoEstado ? 'activada' : 'desactivada'} exitosamente`);
-    } else {
-      alert(result.error || `Error al ${accion} dependencia`);
-    }
+    showConfirm(
+      `¿Estás seguro de que deseas ${accion} esta dependencia?`,
+      async () => {
+        const nuevoEstado = !activoActual;
+        const result = await toggleEstadoDependencia(idDependencia, nuevoEstado);
+        if (result.success) {
+          showAlert(`Dependencia ${nuevoEstado ? 'activada' : 'desactivada'} exitosamente`, "success");
+        } else {
+          showAlert(result.error || `Error al ${accion} dependencia`, "error");
+        }
+      }
+    );
   };
 
   if (!isOpen) return null;
@@ -389,6 +444,106 @@ export default function DependenciasModal({
           )}
         </div>
       </div>
+
+      {/* Modal de Alerta */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-opacity-50 backdrop-blur-sm">
+          <div 
+            className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 ease-out ${
+              alertVisible 
+                ? "opacity-100 scale-100 translate-y-0" 
+                : "opacity-0 scale-95 translate-y-2"
+            }`}
+          >
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                  alertModal.type === 'success' ? 'bg-green-100' :
+                  alertModal.type === 'error' ? 'bg-red-100' : 'bg-blue-100'
+                }`}>
+                  {alertModal.type === 'success' ? (
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  ) : alertModal.type === 'error' ? (
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h3 className={`text-lg font-semibold ${
+                    alertModal.type === 'success' ? 'text-green-800' :
+                    alertModal.type === 'error' ? 'text-red-800' : 'text-blue-800'
+                  }`}>
+                    {alertModal.type === 'success' ? 'Éxito' :
+                     alertModal.type === 'error' ? 'Error' : 'Información'}
+                  </h3>
+                </div>
+              </div>
+              <p className="text-gray-600 mb-6">{alertModal.message}</p>
+              <button
+                onClick={closeAlert}
+                className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                  alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                  alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                  'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-opacity-50 backdrop-blur-sm">
+          <div 
+            className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 ease-out ${
+              confirmVisible 
+                ? "opacity-100 scale-100 translate-y-0" 
+                : "opacity-0 scale-95 translate-y-2"
+            }`}
+          >
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Confirmar Acción</h3>
+                </div>
+              </div>
+              <p className="text-gray-600 mb-6">{confirmModal.message}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={closeConfirm}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    confirmModal.onConfirm();
+                    closeConfirm();
+                  }}
+                  className="flex-1 px-4 py-2 bg-[#0076aa] text-white font-medium rounded-lg hover:bg-[#005a85] transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

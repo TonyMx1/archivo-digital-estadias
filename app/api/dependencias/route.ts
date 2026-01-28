@@ -18,6 +18,15 @@ export async function GET(request: NextRequest) {
     const payload = await verifyToken(token);
     if (!payload) return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
 
+    // Verificar permiso para ver dependencias
+    const canView = await hasPermission(payload.id_rol, PERMISOS.VER_DEPENDENCIAS);
+    if (!canView) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para ver dependencias' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const secretariaId = searchParams.get('secretariaId');
 

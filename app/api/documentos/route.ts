@@ -6,7 +6,9 @@ import {
   createDocumento,
   updateDocumento,
   deleteDocumento,
+  hasPermission,
 } from '@/lib/db';
+import { PERMISOS } from '@/lib/permisos';
 
 // Obtener documentos (con filtros opcionales)
 export async function GET(request: NextRequest) {
@@ -26,6 +28,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'Token inválido' },
         { status: 401 }
+      );
+    }
+
+    // Verificar permiso para ver documentos
+    const canView = await hasPermission(payload.id_rol, PERMISOS.VER_DOCUMENTOS);
+    if (!canView) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para ver documentos' },
+        { status: 403 }
       );
     }
 

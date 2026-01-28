@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { getPool } from '@/lib/db';
+import { getPool, hasPermission } from '@/lib/db';
+import { PERMISOS } from '@/lib/permisos';
 
 // Obtener todos los usuarios con sus roles
 export async function GET(request: NextRequest) {
@@ -136,6 +137,82 @@ export async function PUT(request: NextRequest) {
     console.error('Error al actualizar rol:', error);
     return NextResponse.json(
       { error: 'Error al actualizar el rol del usuario' },
+      { status: 500 }
+    );
+  }
+}
+
+// Eliminar un usuario
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = await getTokenFromCookies();
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const payload = await verifyToken(token);
+    
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Token inválido' },
+        { status: 401 }
+      );
+    }
+
+    // Verificar permiso para eliminar usuarios
+    const canDelete = await hasPermission(payload.id_rol, PERMISOS.ELIMINAR_USUARIOS);
+    if (!canDelete) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para eliminar usuarios' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { id_usuarios } = body;
+
+    if (!id_usuarios) {
+      return NextResponse.json(
+        { error: 'Se requiere el id_usuarios' },
+        { status: 400 }
+      );
+    }
+
+    // Prevenir que un usuario se elimine a sí mismo
+    if (id_usuarios === payload.id_usuarios) {
+      return NextResponse.json(
+        { error: 'No puedes eliminar tu propio usuario' },
+        { status: 400 }
+      );
+    }
+
+    const pool = getPool();
+    
+    // Eliminar el usuario
+    const result = await pool.query(
+      'DELETE FROM usuarios WHERE id_usuarios = $1 RETURNING id_usuarios',
+      [id_usuarios]
+    );
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Usuario eliminado exitosamente',
+    });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    return NextResponse.json(
+      { error: 'Error al eliminar el usuario' },
       { status: 500 }
     );
   }

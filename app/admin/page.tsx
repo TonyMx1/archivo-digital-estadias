@@ -28,6 +28,8 @@ export default function AdminPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'usuarios' | 'roles'>('usuarios');
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   
   // Estado para gestión de roles y permisos
   const [rolesConPermisos, setRolesConPermisos] = useState<RolConPermisos[]>([]);
@@ -43,6 +45,61 @@ export default function AdminPage() {
   const { users, roles, loading, error, isAdmin, updateUserRole } = useAdminUsers();
   const { currentItems, currentPage, totalPages, handlePageChange } = 
     usePagination(users, USERS_PER_PAGE);
+
+  // Función helper para verificar permisos con ADMIN_TOTAL
+  const hasPermission = (permission: string) => {
+    return userPermissions.includes(PERMISOS.ADMIN_TOTAL) || userPermissions.includes(permission);
+  };
+
+  // Cargar permisos del usuario actual
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      try {
+        const response = await fetch("/api/user/permisos");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUserPermissions(data.permisos || []);
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar permisos:", error);
+      }
+    };
+
+    loadUserPermissions();
+  }, []);
+
+  // Función para eliminar usuario
+  const handleDeleteUser = async (userId: number, userName: string) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar al usuario "${userName}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      const response = await fetch(`/api/admin/users`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id_usuarios: userId }),
+      });
+
+      if (response.ok) {
+        alert('Usuario eliminado exitosamente');
+        // Recargar la página para actualizar la lista
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al eliminar usuario');
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al eliminar usuario');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   // Cargar permisos de todos los roles
   const loadPermisosRoles = async () => {
@@ -259,7 +316,10 @@ export default function AdminPage() {
                   roles={roles}
                   isAdmin={isAdmin}
                   updatingUserId={updatingUserId}
+                  deletingUserId={deletingUserId}
                   onRoleChange={handleRoleChange}
+                  onDeleteUser={handleDeleteUser}
+                  canDeleteUsers={hasPermission(PERMISOS.ELIMINAR_USUARIOS)}
                 />
 
                 <PaginationControls

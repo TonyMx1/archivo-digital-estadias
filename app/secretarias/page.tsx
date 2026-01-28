@@ -40,12 +40,41 @@ export default function SecretariasPage() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b3b60] p-4">
-        <div className="bg-red-600 text-white p-6 rounded-lg shadow-lg max-w-md">
-          <h2 className="text-xl font-bold mb-4">Error</h2>
-          <p className="mb-4">{error}</p>
+        <div className="bg-white p-8 rounded-lg shadow-xl max-w-md text-center">
+          {/* Icono de candado */}
+          <div className="flex justify-center mb-4">
+            <div className="bg-amber-100 p-4 rounded-full">
+              <svg
+                className="w-12 h-12 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Título */}
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            Acceso Denegado
+          </h2>
+
+          {/* Mensaje */}
+          <p className="text-gray-600 mb-6">
+            No tienes los permisos necesarios para acceder a esta sección.
+            Contacta al administrador si crees que esto es un error.
+          </p>
+
+          {/* Botón de retorno */}
           <Link
             href="/"
-            className="inline-block px-4 py-2 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+            className="inline-block px-6 py-3 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
           >
             ⬅️ Volver al inicio
           </Link>
@@ -64,7 +93,7 @@ export default function SecretariasPage() {
             <h2 className="text-xl font-bold text-[#0b3b60] mb-6 pl-8">
               SECRETARÍAS
             </h2>
-            
+
             <SecretariasTable secretarias={secretarias} />
           </div>
         </div>

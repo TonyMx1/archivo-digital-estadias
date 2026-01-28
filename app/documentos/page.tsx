@@ -43,14 +43,19 @@ export default function DocumentosPage() {
     message: string;
     isOpen: boolean;
     onConfirm: () => void;
-  }>({ message: '', isOpen: false, onConfirm: () => {} });
+  }>({ message: '', isOpen: false, onConfirm: () => { } });
 
   const [promptModal, setPromptModal] = useState<{
     message: string;
     isOpen: boolean;
     onConfirm: (value: string) => void;
     defaultValue?: string;
-  }>({ message: '', isOpen: false, onConfirm: () => {}, defaultValue: '' });
+  }>({ message: '', isOpen: false, onConfirm: () => { }, defaultValue: '' });
+
+  // Estados para animación de modales
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [promptVisible, setPromptVisible] = useState(false);
 
   // Función para mostrar alertas modales
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -74,21 +79,27 @@ export default function DocumentosPage() {
 
   // Función para cerrar confirmación
   const closeConfirm = () => {
-    setConfirmModal({ message: '', isOpen: false, onConfirm: () => {} });
+    setConfirmModal({ message: '', isOpen: false, onConfirm: () => { } });
   };
 
   // Función para cerrar prompt
   const closePrompt = () => {
-    setPromptModal({ message: '', isOpen: false, onConfirm: () => {}, defaultValue: '' });
+    setPromptModal({ message: '', isOpen: false, onConfirm: () => { }, defaultValue: '' });
   };
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-  const canEliminarDocumentos = userPermissions.includes(PERMISOS.ELIMINAR_DOCUMENTOS);
-  const canEditarDocumentos = userPermissions.includes(PERMISOS.EDITAR_DOCUMENTOS);
-  const canCrearDocumentos = userPermissions.includes(PERMISOS.CREAR_DOCUMENTOS);
-  
+
+  // Función helper para verificar permisos con ADMIN_TOTAL
+  const hasPermission = (permission: string) => {
+    return userPermissions.includes(PERMISOS.ADMIN_TOTAL) || userPermissions.includes(permission);
+  };
+
+  const canEliminarDocumentos = hasPermission(PERMISOS.ELIMINAR_DOCUMENTOS);
+  const canEditarDocumentos = hasPermission(PERMISOS.EDITAR_DOCUMENTOS);
+  const canCrearDocumentos = hasPermission(PERMISOS.CREAR_DOCUMENTOS);
+
   // Para el modal: si está editando, necesita permiso de editar. Si está creando, necesita permiso de crear
   const canEditCurrentDocument = editingDocumento ? canEditarDocumentos : canCrearDocumentos;
 
@@ -152,15 +163,13 @@ export default function DocumentosPage() {
         const data = await response.json();
         if (data.success) {
           setCurrentUserRole(data.user.id_rol);
-          
+
           // Cargar permisos del usuario
           const permisosResponse = await fetch("/api/user/permisos");
           if (permisosResponse.ok) {
             const permisosData = await permisosResponse.json();
             if (permisosData.success) {
               setUserPermissions(permisosData.permisos || []);
-              console.log('✅ Permisos cargados:', permisosData.permisos);
-              console.log('✅ Puede crear documentos:', permisosData.permisos?.includes(PERMISOS.CREAR_DOCUMENTOS));
             }
           }
         }
@@ -183,6 +192,36 @@ export default function DocumentosPage() {
     fetchDocumentos(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroSecretaria, filtroTipo, filtroAnio, filtroEstatus]);
+
+  // Animación para modal de alerta
+  useEffect(() => {
+    if (alertModal.isOpen) {
+      const frame = requestAnimationFrame(() => setAlertVisible(true));
+      return () => cancelAnimationFrame(frame);
+    } else {
+      setAlertVisible(false);
+    }
+  }, [alertModal.isOpen]);
+
+  // Animación para modal de confirmación
+  useEffect(() => {
+    if (confirmModal.isOpen) {
+      const frame = requestAnimationFrame(() => setConfirmVisible(true));
+      return () => cancelAnimationFrame(frame);
+    } else {
+      setConfirmVisible(false);
+    }
+  }, [confirmModal.isOpen]);
+
+  // Animación para modal de prompt
+  useEffect(() => {
+    if (promptModal.isOpen) {
+      const frame = requestAnimationFrame(() => setPromptVisible(true));
+      return () => cancelAnimationFrame(frame);
+    } else {
+      setPromptVisible(false);
+    }
+  }, [promptModal.isOpen]);
 
   // Filtrar documentos por búsqueda
   const documentosFiltrados = documentos.filter((doc) => {
@@ -280,12 +319,41 @@ export default function DocumentosPage() {
   if (error && documentos.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b3b60] p-4">
-        <div className="bg-red-600 text-white p-6 rounded-lg shadow-lg max-w-md">
-          <h2 className="text-xl font-bold mb-4">Error</h2>
-          <p className="mb-4">{error}</p>
+        <div className="bg-white p-8 rounded-lg shadow-xl max-w-md text-center">
+          {/* Icono de candado */}
+          <div className="flex justify-center mb-4">
+            <div className="bg-amber-100 p-4 rounded-full">
+              <svg
+                className="w-12 h-12 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Título */}
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            Acceso Denegado
+          </h2>
+
+          {/* Mensaje */}
+          <p className="text-gray-600 mb-6">
+            No tienes los permisos necesarios para acceder a esta sección.
+            Contacta al administrador si crees que esto es un error.
+          </p>
+
+          {/* Botón de retorno */}
           <Link
             href="/"
-            className="inline-block px-4 py-2 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+            className="inline-block px-6 py-3 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
           >
             ⬅️ Volver al inicio
           </Link>
@@ -669,20 +737,20 @@ export default function DocumentosPage() {
                               className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Eliminar"
                             >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="w-5 h-5"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                              />
-                            </svg>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                                />
+                              </svg>
                             </button>
                           )}
                         </div>
@@ -693,7 +761,7 @@ export default function DocumentosPage() {
 
                 {/* Versión simplificada que siempre funciona */}
                 {totalPages > 1 && (
-                    <div className="mt-8 pt-6 border-t border-gray-200 [border-left:none] [border-right:none]">
+                  <div className="mt-8 pt-6 border-t border-gray-200 [border-left:none] [border-right:none]">
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-sm text-gray-600">
                         <span className="font-semibold text-gray-900">
@@ -796,7 +864,13 @@ export default function DocumentosPage() {
       {/* Modal de alertas */}
       {alertModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-200 scale-100">
+          <div 
+            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${
+              alertVisible 
+                ? "opacity-100 scale-100 translate-y-0" 
+                : "opacity-0 scale-95 translate-y-2"
+            }`}
+          >
             <div className="flex items-center gap-3 mb-4">
               {alertModal.type === 'success' && (
                 <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-full">
@@ -820,23 +894,21 @@ export default function DocumentosPage() {
                 </div>
               )}
               <div>
-                <h3 className={`text-lg font-semibold ${
-                  alertModal.type === 'success' ? 'text-green-800' :
-                  alertModal.type === 'error' ? 'text-red-800' : 'text-blue-800'
-                }`}>
+                <h3 className={`text-lg font-semibold ${alertModal.type === 'success' ? 'text-green-800' :
+                    alertModal.type === 'error' ? 'text-red-800' : 'text-blue-800'
+                  }`}>
                   {alertModal.type === 'success' ? 'Éxito' :
-                   alertModal.type === 'error' ? 'Error' : 'Información'}
+                    alertModal.type === 'error' ? 'Error' : 'Información'}
                 </h3>
               </div>
             </div>
             <p className="text-gray-700 mb-6">{alertModal.message}</p>
             <button
               onClick={closeAlert}
-              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
-                alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
-                'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
+              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                  alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                    'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
             >
               Cerrar
             </button>
@@ -847,7 +919,13 @@ export default function DocumentosPage() {
       {/* Modal de confirmación */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-200 scale-100">
+          <div 
+            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${
+              confirmVisible 
+                ? "opacity-100 scale-100 translate-y-0" 
+                : "opacity-0 scale-95 translate-y-2"
+            }`}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 flex items-center justify-center bg-yellow-100 rounded-full">
                 <svg className="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -883,7 +961,13 @@ export default function DocumentosPage() {
       {/* Modal de entrada de texto (prompt) */}
       {promptModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-200 scale-100">
+          <div 
+            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${
+              promptVisible 
+                ? "opacity-100 scale-100 translate-y-0" 
+                : "opacity-0 scale-95 translate-y-2"
+            }`}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-full">
                 <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">

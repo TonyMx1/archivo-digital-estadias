@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { getSecretarias } from '@/lib/db';
+import { getSecretarias, hasPermission } from '@/lib/db';
+import { PERMISOS } from '@/lib/permisos';
 
 // Obtener todas las secretarías
 export async function GET() {
@@ -20,6 +21,15 @@ export async function GET() {
       return NextResponse.json(
         { error: 'Token inválido' },
         { status: 401 }
+      );
+    }
+
+    // Verificar permiso para ver secretarías
+    const canView = await hasPermission(payload.id_rol, PERMISOS.VER_SECRETARIAS);
+    if (!canView) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para ver secretarías' },
+        { status: 403 }
       );
     }
 
