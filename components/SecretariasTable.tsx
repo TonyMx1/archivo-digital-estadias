@@ -111,11 +111,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {secretaria.id_secretaria}
                   </td>
-<<<<<<< HEAD
                   <td className="px-6 py-4 text-base text-gray-700">
-=======
-                  <td className="px-6 py-4 text-sm text-gray-900">
->>>>>>> fc97872fc0ef8bbb5be0f30879cfe219292e5407
                     {secretaria.nombre_secretaria}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
