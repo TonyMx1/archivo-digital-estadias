@@ -183,13 +183,8 @@
   }
 }
 
-/* Loading state for buttons */
-button:disabled {
-  position: relative;
-  overflow: hidden;
-}
-
-button:disabled::after {
+/* Loading state for buttons - excluding pagination buttons completely */
+button:not(.pagination-button):disabled::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -203,6 +198,12 @@ button:disabled::after {
   );
   animation: shimmer 2s infinite;
   transform: translateX(-100%);
+}
+
+/* Only apply positioning to non-pagination disabled buttons */
+button:not(.pagination-button):disabled {
+  position: relative;
+  overflow: hidden;
 }
 
 .rounded-lg {

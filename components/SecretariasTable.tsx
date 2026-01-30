@@ -46,7 +46,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
 
   return (
     <>
-      {/* Selector de items por página - COMENTADO */}
+      {/* Selector de items por página */}
       {/*
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
@@ -166,8 +166,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
               className={`
-          inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-          transition-all duration-200
+          inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium pagination-button
           ${currentPage === 1
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm'
@@ -189,8 +188,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
                   onClick={() => goToPage(pageNum)}
                   disabled={currentPage === pageNum}
                   className={`
-              min-w-[40px] h-[40px] rounded-lg text-sm font-medium
-              transition-all duration-200
+              min-w-[40px] h-[40px] rounded-lg text-sm font-medium pagination-button
               ${currentPage === pageNum
                       ? 'bg-gradient-to-r from-[#0076aa] to-[#005a87] text-white shadow-md cursor-default'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-[#0076aa] hover:text-[#0076aa]'
@@ -209,8 +207,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className={`
-          inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-          transition-all duration-200
+          inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium pagination-button
           ${currentPage === totalPages
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm'
