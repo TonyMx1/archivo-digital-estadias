@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useLogin } from '@/hooks/useLogin';
 import LoginAndVisitanteFooter from './LoginAndVisitanteFooter';
+import { useEffect, useRef } from 'react';
 
 type LoginFormProps = {
   onSuccess: () => void;
@@ -19,7 +20,33 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
     handleSubmit,
   } = useLogin({ onSuccess });
 
+  const curpInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
   const curpLength = formData.curp.trim().length;
+
+  // 👇 Aquí va el efecto para manejar el focus
+  useEffect(() => {
+    if (error) {
+      // Si hay un error relacionado con CURP, enfocar el campo CURP
+      if (error.toLowerCase().includes('curp') || error.toLowerCase().includes('formato')) {
+        curpInputRef.current?.focus();
+      }
+      // Si es error de contraseña o credenciales, enfocar el campo de contraseña
+      else if (error.toLowerCase().includes('contraseña') ||
+        error.toLowerCase().includes('credencial') ||
+        error.toLowerCase().includes('incorrect')) {
+        passwordInputRef.current?.focus();
+      }
+
+      // También anunciar el error para lectores de pantalla
+      if (errorRef.current) {
+        errorRef.current.setAttribute('role', 'alert');
+        errorRef.current.setAttribute('aria-live', 'assertive');
+      }
+    }
+  }, [error]);
 
   const handleBlockClipboard = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -40,7 +67,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             <h1 className="text-3xl font-bold text-[#0b3b60]">Archivo Digital</h1>
           </div>
           <p className="text-md text-gray-500">
-            
+            Bienvenido, ingresa con tus credenciales de la CUS
           </p>
         </div>
 
@@ -48,11 +75,14 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           <div>
             <label
               htmlFor="curp"
-              className="block text-sm font-medium text-[#0b3b60] mb-2"
+              className="block text-lg font-medium text-[#0b3b60] mb-2 pl-4"
             >
               CURP
             </label>
             <input
+              ref={curpInputRef}
+              autoComplete='username'
+              disabled={isLoading}
               type="text"
               id="curp"
               name="curp"
@@ -63,15 +93,15 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               onCut={handleBlockClipboard}
               onContextMenu={handleBlockContextMenu}
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00b2e2] focus:border-transparent transition-all uppercase text-gray-900 ${curpLength > 0 && curpLength !== 18
-                  ? 'border-red-300 bg-red-50'
-                  : 'border-gray-300 bg-white'
+                ? 'border-red-300 bg-red-50'
+                : 'border-gray-300 bg-white'
                 }`}
               placeholder="ABCD123456HDFGHI01"
               maxLength={18}
               required
             />
             {curpLength > 0 && curpLength !== 18 && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-red-600" aria-live="polite">
                 {curpLength < 18
                   ? `Faltan ${18 - curpLength} caracteres (requiere 18 caracteres)`
                   : `Tiene ${curpLength - 18} carácter${curpLength - 18 > 1 ? 'es' : ''} de más (requiere 18 caracteres)`}
@@ -85,12 +115,14 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-[#0b3b60] mb-2"
+              className="block text-lg font-medium text-[#0b3b60] mb-2 pl-4"
             >
               Contraseña
             </label>
             <div className="relative">
               <input
+                ref={passwordInputRef}
+                autoComplete='current-password'
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 name="password"
@@ -152,8 +184,37 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm text-left break-words">
-              {error}
+            <div
+              ref={errorRef}
+              className={`
+    ${error.includes('incorrecta') ? 'bg-red-50 border-red-200 text-red-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}
+    px-4 py-3 rounded-lg text-sm text-left break-words animate-shake flex items-start gap-2
+  `}
+            >
+              {/* Icono de candado para errores de credenciales */}
+              {error.includes('incorrecta') ? (
+                <svg
+                  className="w-5 h-5 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                /* Icono de advertencia para otros errores */
+                <svg
+                  className="w-5 h-5 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              )}
+              <span className="flex-1">{error}</span>
             </div>
           )}
 
@@ -203,7 +264,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       </div>
 
       <LoginAndVisitanteFooter />
-      
+
     </div>
   );
 }

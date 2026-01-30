@@ -9,6 +9,10 @@ export function useActivity() {
   const updateActivity = useCallback(async () => {
     try {
       // Verificar si hay cookie de sesión antes de hacer la petición
+      if (typeof window === 'undefined') {
+        return; // No ejecutar en el servidor
+      }
+      
       const hasAuthToken = document.cookie.split(';').some(cookie => 
         cookie.trim().startsWith('auth-token=')
       );
@@ -30,6 +34,11 @@ export function useActivity() {
   }, []);
 
   useEffect(() => {
+    // No ejecutar en el servidor
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     // Verificar si hay sesión al montar
     const hasAuthToken = document.cookie.split(';').some(cookie => 
       cookie.trim().startsWith('auth-token=')

@@ -337,7 +337,7 @@ export default function AdminPage() {
               <div className="bg-white rounded-2xl shadow-2xl p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-[#0b3b60]">Gestión de Roles y Permisos</h2>
-                  <button
+                  {/* <button
                     onClick={() => setShowAddRoleForm(true)}
                     className="px-4 py-2 bg-[#0076aa] text-white font-semibold rounded-lg hover:bg-[#005a85] transition-all shadow-lg flex items-center gap-2"
                   >
@@ -345,7 +345,7 @@ export default function AdminPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Agregar Rol
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Formulario para agregar nuevo rol */}

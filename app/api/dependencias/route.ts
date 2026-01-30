@@ -137,6 +137,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Verificar permiso para editar dependencias
+    const canEdit = await hasPermission(payload.id_rol, PERMISOS.EDITAR_DEPENDENCIAS);
+    if (!canEdit) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para editar dependencias' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { id_dependencia, nombre_dependencia, dep_nomcl } = body;
 

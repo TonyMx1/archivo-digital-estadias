@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
 import ExitoFooter from "@/components/ExitoFooter";
 import HeaderAll from "@/components/HeaderAll";
 

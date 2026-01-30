@@ -1,92 +1,87 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ExitoFooter from '@/components/ExitoFooter';
+import './page.css';
 
 export default function ExitoPage() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Obtener el token del CUS de sessionStorage y actualizar el nombre
-    const updateUserName = async () => {
-      try {
-        if (typeof window !== 'undefined') {
-          const cusToken = sessionStorage.getItem('cusToken');
-          
-          if (cusToken) {
-            // Llamar a la API para actualizar el nombre usando el token del CUS
-            const response = await fetch('/api/user/update-name', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                cusToken: cusToken,
-              }),
-            });
+    // AbortController para cancelar peticiones pendientes
+    const abortController = new AbortController();
+    let timer: NodeJS.Timeout | null = null;
+    let progressTimer: NodeJS.Timeout | null = null;
 
-            if (response.ok) {
-              const data = await response.json();
-              console.log('Nombre actualizado:', data.nombre_completo);
-            } else {
-              console.error('Error al actualizar nombre:', await response.text());
-            }
-          }
+    // Simular barra de progreso
+    const startProgress = () => {
+      let currentProgress = 0;
+      progressTimer = setInterval(() => {
+        currentProgress += 10;
+        setProgress(currentProgress);
+        if (currentProgress >= 100) {
+          if (progressTimer) clearInterval(progressTimer);
         }
-      } catch (error) {
-        console.error('Error al actualizar nombre del usuario:', error);
-        // No bloquear el flujo si falla la actualización del nombre
-      }
+      }, 300);
     };
 
-    updateUserName();
-
-    // Verificar el rol del usuario y redirigir según corresponda
-    let timer: NodeJS.Timeout | null = null;
-    
-    const checkUserRoleAndRedirect = async () => {
+    // Función combinada para actualizar nombre y verificar rol
+    const updateUserAndRedirect = async () => {
       try {
-        const userResponse = await fetch('/api/user');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          if (userData.success) {
-            const userRole = userData.user.id_rol;
-            
-            // Redirigir según el rol después de 3 segundos
-            timer = setTimeout(() => {
-              if (userRole === 9) {
-                // Visitantes van a la página de espera
-                router.push('/visitante');
-              } else {
-                // Otros usuarios van al home
-                router.push('/');
-              }
-            }, 3000);
-          }
+        if (typeof window === 'undefined') return;
+
+        const cusToken = sessionStorage.getItem('cusToken');
+        
+        // Llamada combinada a la API
+        const response = await fetch('/api/user/update-and-redirect', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cusToken: cusToken,
+          }),
+          signal: abortController.signal,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Proceso completado:', data);
+          
+          // Redirigir según el rol después de 3 segundos
+          timer = setTimeout(() => {
+            const redirectTarget = data.userRole === 9 ? '/visitante' : '/';
+            router.push(redirectTarget);
+          }, 3000);
         } else {
-          // Si no se puede obtener el usuario, redirigir al home por defecto
+          throw new Error('Error en el proceso de autenticación');
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Error en el proceso:', error);
+          setError('Ocurrió un error durante el proceso. Serás redirigido al inicio...');
+          
+          // Redirección de fallback
           timer = setTimeout(() => {
             router.push('/');
           }, 3000);
         }
-      } catch (error) {
-        console.error('Error al verificar rol:', error);
-        // Si hay error, redirigir al home por defecto
-        timer = setTimeout(() => {
-          router.push('/');
-        }, 3000);
       }
     };
 
-    checkUserRoleAndRedirect();
+    // Iniciar procesos
+    startProgress();
+    updateUserAndRedirect();
 
-    // Limpiar el timer si el componente se desmonta
+    // Cleanup
     return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
+      if (timer) clearTimeout(timer);
+      if (progressTimer) clearInterval(progressTimer);
+      abortController.abort();
     };
   }, [router]);
 
@@ -94,14 +89,32 @@ export default function ExitoPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#0b3b60] p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6 text-center">
-          {/* Icono de éxito */}
+          {/* Icono de éxito animado */}
           <div className="flex justify-center">
             <div className="w-20 h-20 flex items-center justify-center">
-            <img
-              src="https://media.tenor.com/AWKzZ19awFYAAAAi/checkmark-transparent.gif"
-              alt="Éxito"
-              className="w-20 h-20 object-contain"
-            />
+              <svg
+                className="w-20 h-20 text-green-500 animate-checkmark"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                role="img"
+                aria-label="Checkmark de éxito"
+              >
+                <circle
+                  className="animate-circle"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  strokeWidth="2"
+                />
+                <path
+                  className="animate-path"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
             </div>
           </div>
 
@@ -111,14 +124,33 @@ export default function ExitoPage() {
               Login exitoso
             </h1>
             <p className="text-gray-600">
-              Has iniciado sesión correctamente. Serás redirigido en unos momentos...
+              Has iniciado sesión correctamente. Serás redirigido en unos segundos...
             </p>
           </div>
 
-          {/* Spinner de carga */}
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0076aa]"></div>
+          {/* Barra de progreso */}
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-[#0076aa] h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progreso de redirección"
+            />
           </div>
+
+          {/* Mensaje de error */}
+          {error && (
+            <div 
+              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+              role="alert"
+              aria-live="polite"
+            >
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
         </div>
 
         <ExitoFooter />

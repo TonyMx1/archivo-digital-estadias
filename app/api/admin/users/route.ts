@@ -24,8 +24,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verificar que el usuario sea administrador (id_rol = 1) o superusuario (id_rol = 2)
-    if (payload.id_rol !== 1 && payload.id_rol !== 2) {
+    // Verificar permiso para ver usuarios
+    const canViewUsers = await hasPermission(payload.id_rol, PERMISOS.VER_ADMIN);
+    if (!canViewUsers) {
       return NextResponse.json(
         { error: 'No tienes permisos para acceder a esta información' },
         { status: 403 }
@@ -90,10 +91,11 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Solo el administrador (id_rol = 1) puede modificar roles
-    if (payload.id_rol !== 1) {
+    // Verificar permiso para editar usuarios
+    const canEditUsers = await hasPermission(payload.id_rol, PERMISOS.EDITAR_USUARIOS);
+    if (!canEditUsers) {
       return NextResponse.json(
-        { error: 'Solo los administradores pueden modificar roles' },
+        { error: 'No tienes permisos para modificar roles' },
         { status: 403 }
       );
     }

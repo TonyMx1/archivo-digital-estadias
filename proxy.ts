@@ -5,7 +5,7 @@ import { verifyToken } from './lib/auth';
 // Rutas que no requieren autenticación
 const publicRoutes = ['/login', '/api/login', '/api/logout'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Permitir acceso a rutas públicas
