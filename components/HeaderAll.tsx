@@ -23,7 +23,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
 
   pageTitle = "Sistema de gestión de archivos digitales",
   pageSubtitle = "Administración documental electrónica",
-  showLogo = true,
+  showLogo = false,
   showMenuButton = false,
 }) => {
   const router = useRouter();
@@ -123,17 +123,24 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       >
         <div className="flex flex-col flex-center h-full">
           {/* Encabezado del menú */}
-          <div className="bg-[#0076aa] px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h2 className="text-white font-bold text-sm">Archivo Digital</h2>
-                  <p className="text-white/70 text-xs">Menú de navegación</p>
-                </div>
+          <div className="bg-[#0076aa] px-4 py-5">
+            <div className="flex flex-col items-center gap-3">
+              <div className="text-center">
+                {/* <h2 className="text-white font-bold text-sm">Archivo Digital</h2> */}
+                
               </div>
+              <Image
+                src="/legado.png"
+                alt="SJR Legado de Bien Común"
+                width={140}
+                height={140}
+                className="object-contain"
+                priority
+              />
+              <p className="text-white/70 text-xs">Menú de navegación</p>
               <button
                 onClick={() => setIsMenuOpen(false)}
-                className="text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors"
+                className="absolute top-4 right-4 text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors"
                 aria-label="Cerrar menú"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,6 +149,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </button>
             </div>
           </div>
+
 
           {/* Contenido del menú */}
           <nav className="flex-1 p-4 overflow-y-auto">

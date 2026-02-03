@@ -8,19 +8,19 @@ export default function ExitoFooter() {
         <div className="flex items-center justify-center gap-4">
 
           {/* Imagen */}
-          <div className="w-[60px] sm:w-[70px]">
+          <div className="w-[60px] sm:w-[80px]">
             <Image
               src="/logo_white.png"
               alt="Legado"
-              width={300}
-              height={300}
+              width={500}
+              height={500}
               className="w-full h-auto opacity-90"
               priority={false}
             />
           </div>
 
           {/* Separador vertical */}
-          <div className="h-14 w-px bg-white/50"></div>
+          <div className="h-15 w-px bg-white/50"></div>
 
           {/* Texto */}
           <div>
