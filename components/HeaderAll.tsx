@@ -127,7 +127,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
             <div className="flex flex-col items-center gap-3">
               <div className="text-center">
                 {/* <h2 className="text-white font-bold text-sm">Archivo Digital</h2> */}
-                
+
               </div>
               <Image
                 src="/legado.png"
