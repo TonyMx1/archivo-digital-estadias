@@ -1,8 +1,21 @@
 # Sistema de Archivo Digital - Municipio de San Juan del Río
 
+**Versión**: 0.1.0 | **Última actualización**: Enero 2026
+
 ## Descripción
 
 Sistema integral de gestión documental desarrollado para el Municipio de San Juan del Río, diseñado para digitalizar y modernizar la administración de archivos municipales. Esta plataforma permite abandonar los procesos basados en papel y migrar hacia una solución completamente digital, optimizando la gestión, búsqueda y almacenamiento de documentos oficiales.
+
+## 🚀 Novedades Principales
+
+### ✨ Nuevas Funcionalidades (v0.1.0)
+- **Sistema de actividad en tiempo real**: Tracking automático de actividad del usuario
+- **Página de éxito mejorada**: Interfaz animada con barra de progreso post-login
+- **Gestión avanzada de usuarios**: Administración completa de usuarios y roles
+- **Sistema de permisos granular**: 11 permisos específicos configurables
+- **API de actividad**: Endpoint para monitoreo de sesiones activas
+- **Redirección inteligente**: Basada en rol con actualización automática de nombre
+- **Footer personalizado**: Componente ExitoFooter para branding institucional
 
 ## Ventajas
 
@@ -43,10 +56,14 @@ Sistema integral de gestión documental desarrollado para el Municipio de San Ju
 - **Vista detallada**: Modal con información completa de dependencias por secretaría
 
 ### 👥 Gestión de Usuarios y Roles
-- **Sistema de roles granular**: Tres niveles principales con permisos diferenciados
+- **Sistema de roles granular**: Cuatro niveles principales con permisos diferenciados
 - **Control de acceso basado en permisos**: 11 permisos específicos asignables
 - **Administración de usuarios**: Gestión completa de usuarios y roles
 - **Rol de visitante**: Acceso limitado para consultas públicas
+- **Activity tracking**: Monitoreo de actividad por usuario
+- **Gestión de sesiones**: Control de sesiones activas y expiradas
+- **Actualización automática de perfiles**: Sincronización con API externa
+- **Administración de permisos**: Asignación granular de capacidades
 
 ### 🔐 Seguridad y Autenticación
 - **JWT tokens**: Autenticación segura con expiración automática
@@ -54,6 +71,9 @@ Sistema integral de gestión documental desarrollado para el Municipio de San Ju
 - **Sesiones seguras**: Cookies HTTP-only con tokens cifrados
 - **Redirección automática**: Manejo inteligente de accesos no autorizados
 - **Auditoría**: Registro de actividades del sistema
+- **Activity tracking**: Monitoreo en tiempo real de actividad del usuario
+- **Gestión de sesiones**: Control automático de sesiones expiradas
+- **Actualización automática**: Sincronización de datos de usuario al iniciar sesión
 
 ### 📊 Estadísticas y Reportes
 - **Contadores en tiempo real**: Documentos, secretarías, dependencias activas
@@ -67,6 +87,9 @@ Sistema integral de gestión documental desarrollado para el Municipio de San Ju
 - **Modales interactivos**: Formularios elegantes con validación
 - **Estados de carga**: Indicadores visuales durante operaciones asíncronas
 - **Manejo de errores**: Estados de error con opciones de recuperación
+- **Página de éxito**: Interfaz animada post-login con barra de progreso
+- **Footer institucional**: Branding personalizado para el municipio
+- **Componentes UI**: Librería de componentes reutilizables con Radix UI
 
 ## Roles y Permisos
 
@@ -119,18 +142,45 @@ archivo-digital/
 ├── app/                    # Páginas y rutas de Next.js
 │   ├── admin/             # Panel de administración
 │   ├── api/               # Endpoints de la API
-│   │   ├── documentos/   # Gestión de documentos
+│   │   ├── activity/      # Tracking de actividad
+│   │   ├── admin/         # Gestión de administradores
+│   │   ├── documentos/    # Gestión de documentos
 │   │   ├── ocr/           # Procesamiento OCR
 │   │   ├── secretarias/   # Gestión de secretarías
-│   │   ├── usuarios/      # Gestión de usuarios
-│   │   └── auth/          # Autenticación
+│   │   ├── user/          # Gestión de usuarios
+│   │   ├── login/         # Autenticación
+│   │   ├── logout/        # Cierre de sesión
+│   │   ├── statistics/    # Estadísticas
+│   │   ├── tipo-documento/# Tipos de documentos
+│   │   └── upload/        # Subida de archivos
 │   ├── documentos/        # Gestión documental
+│   ├── exito/             # Página de éxito post-login
 │   ├── secretarias/       # Administración de secretarías
 │   ├── visitante/         # Portal de visitantes
-│   └── login/             # Página de inicio de sesión
+│   ├── login/             # Página de inicio de sesión
+│   ├── layout.tsx         # Layout principal
+│   └── page.tsx           # Dashboard principal
 ├── components/            # Componentes React reutilizables
+│   ├── ui/                # Componentes UI base (Radix UI)
+│   ├── ActivityTracker.tsx # Tracking de actividad
+│   ├── DocumentosModal.tsx # Modal de documentos
+│   ├── DependenciasModal.tsx # Modal de dependencias
+│   ├── ExitoFooter.tsx    # Footer institucional
+│   └── ...                # Otros componentes
 ├── hooks/                 # Hooks personalizados de React
+│   ├── useActivity.ts     # Hook de actividad
+│   ├── useAdminUsers.ts   # Hook de administración
+│   ├── useDocumentos.ts   # Hook de documentos
+│   └── ...                # Otros hooks
 ├── lib/                   # Utilidades y configuración
+│   ├── auth-permisos.ts   # Lógica de permisos
+│   ├── auth-server.ts     # Configuración auth servidor
+│   ├── cus-api.ts         # Cliente API externa
+│   └── ...                # Otras utilidades
+├── docs/                  # Documentación del proyecto
+│   ├── API_REFERENCE.md   # Referencia de API
+│   ├── CHANGELOG.md        # Registro de cambios
+│   └── DOCUMENTACION_TECNICA.md # Guía técnica
 └── public/                # Archivos estáticos
 ```
 
@@ -138,6 +188,9 @@ archivo-digital/
 - **POST /api/login**: Autenticación de usuarios
 - **POST /api/logout**: Cierre de sesión
 - **GET /api/user**: Información del usuario actual
+- **POST /api/user/update-name**: Actualización de nombre de usuario
+- **POST /api/user/update-and-redirect**: Actualización y redirección inteligente
+- **GET /api/user/permisos**: Permisos del usuario actual
 - **GET /api/documentos**: Listado de documentos con filtros
 - **POST /api/documentos**: Creación de nuevos documentos
 - **PUT /api/documentos/:id**: Actualización de documentos
@@ -146,6 +199,12 @@ archivo-digital/
 - **GET /api/secretarias**: Listado de secretarías
 - **GET /api/dependencias**: Listado de dependencias
 - **GET /api/statistics**: Estadísticas del sistema
+- **POST /api/activity**: Tracking de actividad del usuario
+- **GET /api/tipo-documento**: Tipos de documentos disponibles
+- **POST /api/upload**: Subida de archivos
+- **GET /api/admin/users**: Gestión de usuarios (admin)
+- **GET /api/admin/roles**: Gestión de roles (admin)
+- **GET /api/admin/permisos**: Gestión de permisos (admin)
 
 ### 🗄️ Base de Datos
 - **usuarios**: Información de usuarios y autenticación
@@ -155,6 +214,8 @@ archivo-digital/
 - **dependencias**: Dependencias organizacionales
 - **documentos**: Metadatos de documentos
 - **tipo_documento**: Tipos de documentos disponibles
+- **sesiones**: Control de sesiones activas (nuevo)
+- **actividad**: Registro de actividad del usuario (nuevo)
 
 ## Instalación
 
@@ -226,7 +287,10 @@ npm start
 
 ### 🔑 Inicio de Sesión
 1. Acceder al sistema con las credenciales proporcionadas
-2. El sistema redirigirá automáticamente según el rol asignado
+2. **Página de éxito**: Interfaz animada con barra de progreso
+3. **Actualización automática**: Sincronización de datos de usuario
+4. **Redirección inteligente**: Según el rol asignado
+5. **Activity tracking**: Monitoreo automático de actividad
 
 ### 📋 Navegación por Secciones
 - **Dashboard**: Vista principal con estadísticas y acceso rápido
@@ -255,6 +319,9 @@ npm start
 - **Mammoth**: Procesamiento de documentos Word (.docx)
 - **Timeout control**: 60 segundos máximo por procesamiento
 - **Límite de tamaño**: Máximo 25MB por archivo
+- **Procesamiento asíncrono**: Sin bloqueo de la interfaz
+- **Extracción inteligente**: Texto para búsqueda full-text
+- **Soporte multi-formato**: PDF, DOCX, PNG, JPG, JPEG
 
 ### 🔐 Seguridad Implementada
 - **JWT middleware**: Verificación automática de tokens
@@ -262,6 +329,9 @@ npm start
 - **Route protection**: Middleware para rutas protegidas
 - **Token expiration**: Manejo automático de sesiones expiradas
 - **Secure cookies**: Cookies HTTP-only para tokens
+- **Activity monitoring**: Detección de actividad sospechosa
+- **Session management**: Control de sesiones concurrentes
+- **Input validation**: Validación estricta de datos
 
 ### 🎨 Experiencia de Usuario
 - **Loading states**: Indicadores durante operaciones asíncronas
@@ -275,11 +345,29 @@ npm start
 - **Debounced search**: Búsqueda optimizada para mejor rendimiento
 - **Lazy loading**: Carga progresiva de componentes
 - **Caching strategy**: Almacenamiento en caché de datos frecuentes
+- **Activity debouncing**: Actualización de actividad cada 30 segundos
+- **Code splitting**: División automática de código
+- **Memory management**: Optimización en procesamiento OCR
+- **Async operations**: Operaciones no bloqueantes
 
-## Soporte
+## 📚 Documentación Completa
+
+- **[README.md](./README.md)**: Documentación principal (este archivo)
+- **[DOCUMENTACION_TECNICA.md](./docs/DOCUMENTACION_TECNICA.md)**: Guía técnica completa
+- **[API_REFERENCE.md](./docs/API_REFERENCE.md)**: Referencia detallada de la API
+- **[CHANGELOG.md](./docs/CHANGELOG.md)**: Registro histórico de cambios
+- **[DOCUMENTACION_USUARIO.md](./docs/DOCUMENTACION_USUARIO.md)**: Guía para usuarios finales
+
+## 🆘 Soporte
 
 Para reportar problemas o solicitar nuevas funcionalidades, contactar al equipo de desarrollo del municipio.
+
+### 📞 Canales de Soporte
+- **Equipo de Desarrollo**: [Contacto interno]
+- **Documentación**: Revisar docs/ para guías detalladas
+- **Issues**: Reportar problemas mediante el sistema de tickets
 
 ---
 
 **Desarrollado para el Municipio de San Juan del Río**
+*Versión 0.1.0 - Enero 2026*

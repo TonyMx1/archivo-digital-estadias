@@ -101,14 +101,14 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               required
             />
             {curpLength > 0 && curpLength !== 18 && (
-              <p className="mt-1 text-sm text-red-600" aria-live="polite">
+              <p className="mt-1 text-sm text-red-600 text-center" aria-live="polite">
                 {curpLength < 18
                   ? `Faltan ${18 - curpLength} caracteres (requiere 18 caracteres)`
                   : `Tiene ${curpLength - 18} carácter${curpLength - 18 > 1 ? 'es' : ''} de más (requiere 18 caracteres)`}
               </p>
             )}
             {curpLength === 18 && (
-              <p className="mt-1 text-sm text-green-600">CURP válido ✅</p>
+              <p className="mt-1 text-sm text-center text-green-600">CURP válido ✅</p>
             )}
           </div>
 
