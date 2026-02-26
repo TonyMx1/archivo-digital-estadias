@@ -86,8 +86,9 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full px-4">
 
               {/* Tarjeta de Documentos - Color #e67425 */}
-              <div
-                className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200"
+              <button
+                onClick={() => router.push('/documentos')}
+                className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200 text-left"
                 style={{
                   background: 'linear-gradient(to bottom right, #e67425, #b85a1d)'
                 }}
@@ -139,11 +140,12 @@ export default function HomePage() {
                 <div className="text-white/70 text-sm mt-2">
                   Total en archivo digital
                 </div>
-              </div>
+              </button>
               
               {/* Tarjeta de Secretarías - Color #0076aa */}
-              <div
-                className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200"
+              <button
+                onClick={() => router.push('/secretarias')}
+                className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200 text-left"
                 style={{
                   background: 'linear-gradient(to bottom right, #0076aa, #005580)'
                 }}
@@ -195,7 +197,7 @@ export default function HomePage() {
                 <div className="text-white/70 text-sm mt-2">
                   Registradas en el sistema
                 </div>
-              </div>
+              </button>
 
               {/* Tarjeta de Dependencias - Color #00ae6f */}
               <div
