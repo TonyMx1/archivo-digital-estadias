@@ -5,9 +5,11 @@ import { getPool } from './db';
 
 // Verificar sesión en la base de datos por id_usuarios
 export async function getSessionByUserId(idUsuarios: number) {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
-    const result = await pool.query(
+    const result = await client.query(
       `SELECT * FROM sesiones 
        WHERE id_usuarios = $1 
        AND fecha_expiracion > NOW() 
@@ -23,14 +25,18 @@ export async function getSessionByUserId(idUsuarios: number) {
   } catch (error) {
     console.error('Error al obtener sesión:', error);
     return null;
+  } finally {
+    client.release();
   }
 }
 
 // Actualizar última actividad de la sesión
 export async function updateSessionActivity(idUsuarios: number) {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
-    await pool.query(
+    await client.query(
       `UPDATE sesiones 
        SET ultima_actividad = NOW() 
        WHERE id_usuarios = $1 
@@ -41,14 +47,18 @@ export async function updateSessionActivity(idUsuarios: number) {
   } catch (error) {
     console.error('Error al actualizar actividad de sesión:', error);
     return false;
+  } finally {
+    client.release();
   }
 }
 
 // Verificar si existe una sesión activa para el usuario
 export async function hasActiveSession(idUsuarios: number): Promise<boolean> {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
-    const result = await pool.query(
+    const result = await client.query(
       `SELECT * FROM sesiones 
        WHERE id_usuarios = $1 
        AND fecha_expiracion > NOW() 
@@ -60,14 +70,18 @@ export async function hasActiveSession(idUsuarios: number): Promise<boolean> {
   } catch (error) {
     console.error('Error al verificar sesión activa:', error);
     return false;
+  } finally {
+    client.release();
   }
 }
 
 // Eliminar sesión por id_usuarios
 export async function deleteSession(idUsuarios: number) {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
-    await pool.query(
+    await client.query(
       `DELETE FROM sesiones WHERE id_usuarios = $1`,
       [idUsuarios]
     );
@@ -75,6 +89,8 @@ export async function deleteSession(idUsuarios: number) {
   } catch (error) {
     console.error('Error al eliminar sesión:', error);
     return false;
+  } finally {
+    client.release();
   }
 }
 
@@ -95,18 +111,20 @@ export async function deleteSessionByUserId(idUsuarios: number) {
 
 // Crear sesión en la base de datos (sin guardar el token por seguridad)
 export async function createSession(idUsuarios: number) {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
     
     // Primero, eliminar cualquier sesión existente para este usuario (una sesión activa por usuario)
-    await pool.query(
+    await client.query(
       `DELETE FROM sesiones WHERE id_usuarios = $1`,
       [idUsuarios]
     );
     
     // Crear nueva sesión (sin token, solo id_usuarios y fechas)
-    await pool.query(
+    await client.query(
       `INSERT INTO sesiones (id_usuarios, fecha_creacion, fecha_expiracion, ultima_actividad)
        VALUES ($1, NOW(), $2, NOW())`,
       [idUsuarios, expiresAt]
@@ -121,6 +139,8 @@ export async function createSession(idUsuarios: number) {
       return createSession(idUsuarios);
     }
     throw error;
+  } finally {
+    client.release();
   }
 }
 

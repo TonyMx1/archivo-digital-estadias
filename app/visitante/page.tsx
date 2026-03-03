@@ -49,12 +49,12 @@ export default function VisitantePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0b3b60] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-primary p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-4">
-            <h1 className="text-3xl font-bold text-[#0b3b60]">
+            <h1 className="text-3xl font-bold text-primary">
               Archivo Digital
             </h1>
             <div className="pt-4">
@@ -86,16 +86,16 @@ export default function VisitantePage() {
           </div>
 
           {/* Spinner de carga */}
-          <div className="flex justify-center">
+          {/* <div className="flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0076aa]"></div>
-          </div>
+          </div> */}
         
 
           {/* Botón de cerrar sesión */}
           <div className="pt-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-              className="w-full bg-[#0b3b60] text-white font-semibold py-3 px-4 rounded-lg hover:bg-[#005a85] focus:outline-none focus:ring-2 focus:ring-[#00b2e2] focus:ring-offset-2 transition-all shadow-lg"
+              className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-[#005a85] focus:outline-none focus:ring-2 focus:ring-[#00b2e2] focus:ring-offset-2 transition-all shadow-lg"
             >
               Cerrar sesión
             </button>

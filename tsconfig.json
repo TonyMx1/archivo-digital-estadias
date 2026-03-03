@@ -2,6 +2,8 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "outDir": "./lib/cjs",
+    "sourceMap": true,
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -30,5 +32,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist", "lib"]
 }

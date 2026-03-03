@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
 import { useSecretarias } from "@/hooks/useSecretarias";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { DatePicker } from "react-datepicker"
+import { registerLocale, setDefaultLocale } from "react-datepicker";
+import { es } from "date-fns/locale/es";
+import "react-datepicker/dist/react-datepicker.css";
 
+// Registrar locale español
+registerLocale('es', es);
+setDefaultLocale('es');
 
 interface TipoDocumento {
   id_documento: number;
@@ -41,7 +43,9 @@ export default function DocumentosModal({
   const [loadingTipos, setLoadingTipos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [searchSecretaria, setSearchSecretaria] = useState("");
+  const [showSecretariaDropdown, setShowSecretariaDropdown] = useState(false);
+  const [filteredSecretarias, setFilteredSecretarias] = useState(secretarias);
 
   // Estados del formulario
   const [nombreDoc, setNombreDoc] = useState("");
@@ -96,7 +100,7 @@ export default function DocumentosModal({
   };
 
 
-  // Cargar tipos de documento
+  // Cargar tipos de documento con memoización
   useEffect(() => {
     const loadTiposDocumento = async () => {
       setLoadingTipos(true);
@@ -115,58 +119,118 @@ export default function DocumentosModal({
       }
     };
 
-    if (isOpen) {
+    if (isOpen && tiposDocumento.length === 0) {
       loadTiposDocumento();
     }
-  }, [isOpen]);
+  }, [isOpen, tiposDocumento.length]);
 
-  // Inicializar formulario cuando se abre el modal o cambia el documento
+  // HTML5 Date Input - Sin dependencias externas
+
+  // Inicializar formulario con useCallback para optimización
+  const initializeForm = useCallback(() => {
+    if (isEditing && documento) {
+      setNombreDoc(documento.nombre_doc || "");
+      setTipoDoc(documento.tipo_doc || "");
+      setIdSecre(documento.id_secre || "");
+      setSizeDoc(documento.size_doc || "");
+      setAnioDoc(documento.anio_doc || "");
+      setComentarioDoc(documento.comentario_doc || "");
+      setMetaDoc(documento.meta_doc || "");
+      setDescDoc(documento.desc_doc || "");
+      setOficioDoc(documento.oficio_doc || "");
+      setExpedienteDoc(documento.expediente_doc || "");
+      setSerieDoc(documento.serie_doc || "");
+      setSubserieDoc(documento.subserie_doc || "");
+      setConsDoc(documento.cons_doc || "");
+      setConfidencialDoc(documento.confidencial_doc || false);
+      setFechaDoc(documento.fecha_doc || "");
+      setHoraDoc(documento.hora_doc || "");
+      setUrlConsDoc(documento.url_cons_doc || "");
+      setEstatusDoc(documento.estatus_doc || "Activo");
+      setVersionDoc(documento.version_doc || 1);
+    } else {
+      // Resetear formulario para nuevo documento
+      setNombreDoc("");
+      setTipoDoc("");
+      setIdSecre("");
+      setSizeDoc("");
+      setAnioDoc("");
+      setComentarioDoc("");
+      setMetaDoc("");
+      setDescDoc("");
+      setOficioDoc("");
+      setExpedienteDoc("");
+      setSerieDoc("");
+      setSubserieDoc("");
+      setConsDoc("");
+      setConfidencialDoc(false);
+      setFechaDoc("");
+      setHoraDoc("");
+      setUrlConsDoc("");
+      setEstatusDoc("Activo");
+      setVersionDoc(1);
+    }
+  }, [isEditing, documento]);
+
   useEffect(() => {
     if (isOpen) {
-      if (isEditing && documento) {
-        setNombreDoc(documento.nombre_doc || "");
-        setTipoDoc(documento.tipo_doc || "");
-        setIdSecre(documento.id_secre || "");
-        setSizeDoc(documento.size_doc || "");
-        setAnioDoc(documento.anio_doc || "");
-        setComentarioDoc(documento.comentario_doc || "");
-        setMetaDoc(documento.meta_doc || "");
-        setDescDoc(documento.desc_doc || "");
-        setOficioDoc(documento.oficio_doc || "");
-        setExpedienteDoc(documento.expediente_doc || "");
-        setSerieDoc(documento.serie_doc || "");
-        setSubserieDoc(documento.subserie_doc || "");
-        setConsDoc(documento.cons_doc || "");
-        setConfidencialDoc(documento.confidencial_doc || false);
-        setFechaDoc(documento.fecha_doc || "");
-        setHoraDoc(documento.hora_doc || "");
-        setUrlConsDoc(documento.url_cons_doc || "");
-        setEstatusDoc(documento.estatus_doc || "Activo");
-        setVersionDoc(documento.version_doc || 1);
-      } else {
-        // Resetear formulario para nuevo documento
-        setNombreDoc("");
-        setTipoDoc("");
-        setIdSecre("");
-        setSizeDoc("");
-        setAnioDoc("");
-        setComentarioDoc("");
-        setMetaDoc("");
-        setDescDoc("");
-        setOficioDoc("");
-        setExpedienteDoc("");
-        setSerieDoc("");
-        setSubserieDoc("");
-        setConsDoc("");
-        setConfidencialDoc(false);
-        setFechaDoc("");
-        setHoraDoc("");
-        setUrlConsDoc("");
-        setEstatusDoc("Activo");
-        setVersionDoc(1);
-      }
+      initializeForm();
     }
-  }, [isOpen, isEditing, documento]);
+  }, [isOpen, initializeForm]);
+
+  // Memoizar opciones de selectores para optimizar renderizado
+  const tiposDocumentoOptions = useMemo(() =>
+    tiposDocumento.map((tipo) => (
+      <option key={tipo.id_documento} value={tipo.id_documento}>
+        {tipo.nombre_documento}
+      </option>
+    )), [tiposDocumento]);
+
+  const secretariasOptions = useMemo(() =>
+    secretarias.map((sec) => (
+      <option key={sec.id_secretaria} value={sec.id_secretaria}>
+        {sec.nombre_secretaria}
+      </option>
+    )), [secretarias]);
+
+  // Filtrar secretarías basadas en la búsqueda
+  useEffect(() => {
+    if (searchSecretaria.trim() === "") {
+      setFilteredSecretarias(secretarias);
+    } else {
+      const filtered = secretarias.filter(sec =>
+        sec.nombre_secretaria.toLowerCase().includes(searchSecretaria.toLowerCase())
+      );
+      setFilteredSecretarias(filtered);
+    }
+  }, [searchSecretaria, secretarias]);
+
+  // Manejar selección de secretaría existente
+  const handleSecretariaSelect = (secretaria: any) => {
+    setIdSecre(secretaria.id_secretaria);
+    setSearchSecretaria(secretaria.nombre_secretaria);
+    setShowSecretariaDropdown(false);
+  };
+
+  // Inicializar búsqueda cuando se carga una secretaría existente
+  useEffect(() => {
+    if (idSecre && secretarias.length > 0) {
+      const secretaria = secretarias.find(sec => sec.id_secretaria === idSecre);
+      if (secretaria) {
+        setSearchSecretaria(secretaria.nombre_secretaria);
+      }
+    } else if (!idSecre) {
+      setSearchSecretaria("");
+    }
+  }, [idSecre, secretarias]);
+
+  // Manejar cambios en el input de URL
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    // Siempre permitir edición normal
+    setUrlConsDoc(newValue);
+  };
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -330,7 +394,8 @@ export default function DocumentosModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
       <div
-        className={`bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all duration-200 ease-out overflow-hidden ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        id="modal-container"
+        className={`bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all duration-200 ease-out overflow-hidden relative ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
       >
         {/* Header del modal */}
@@ -402,108 +467,112 @@ export default function DocumentosModal({
                   disabled={isSubmitting || loadingTipos}
                 >
                   <option value="">Seleccione un tipo</option>
-                  {tiposDocumento.map((tipo) => (
-                    <option key={tipo.id_documento} value={tipo.id_documento}>
-                      {tipo.nombre_documento}
-                    </option>
-                  ))}
+                  {tiposDocumentoOptions}
                 </select>
               </div>
 
               {/* Secretaría */}
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Secretaría <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={idSecre}
-                  onChange={(e) => setIdSecre(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="">Seleccione una secretaría</option>
-                  {secretarias.map((sec) => (
-                    <option key={sec.id_secretaria} value={sec.id_secretaria}>
-                      {sec.nombre_secretaria}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchSecretaria}
+                    onChange={(e) => {
+                      setSearchSecretaria(e.target.value);
+                      setShowSecretariaDropdown(true);
+                    }}
+                    onFocus={() => setShowSecretariaDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowSecretariaDropdown(false), 200)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                    placeholder="Buscar secretaría..."
+                    required
+                    disabled={isSubmitting}
+                  />
+                  
+                  {/* Dropdown de resultados */}
+                  {showSecretariaDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredSecretarias.length > 0 ? (
+                        filteredSecretarias.map((secretaria) => (
+                          <div
+                            key={secretaria.id_secretaria}
+                            onClick={() => handleSecretariaSelect(secretaria)}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-gray-900">
+                              {secretaria.nombre_secretaria}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-gray-500 text-center">
+                          {searchSecretaria.trim() ? 
+                            "No se encontraron secretarías" : 
+                            "Escribe para buscar secretarías..."
+                          }
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Fecha del documento */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha del documento <span className="text-red-500">*</span>
+                  Fecha de expedición del documento <span className="text-red-500">*</span>
                 </label>
-
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      disabled={isSubmitting}
-                      className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0076aa] disabled:bg-gray-100"
-                    >
-                      <span>
-                        {(() => {
-                          if (!fechaDoc) return "DD/MM/AAAA";
-                          try {
-                            const date = new Date(fechaDoc + 'T00:00:00');
-                            // Verificar si la fecha es válida
-                            if (isNaN(date.getTime())) return "DD/MM/AAAA";
-                            return format(date, "dd/MM/yyyy", { locale: es });
-                          } catch {
-                            return "DD/MM/AAAA";
-                          }
-                        })()}
-                      </span>
-                      <CalendarIcon className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </PopoverTrigger>
-
-                  <PopoverContent className="p-0 border-0 shadow-lg z-50">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        if (!fechaDoc) return undefined;
-                        try {
-                          const date = new Date(fechaDoc + 'T00:00:00');
-                          return isNaN(date.getTime()) ? undefined : date;
-                        } catch {
-                          return undefined;
-                        }
-                      })()}
-                      onSelect={(date) => {
-                        if (!date) {
-                          setFechaDoc("");
-                          setIsCalendarOpen(false);
-                          return;
-                        }
-
-                        // Extrae año, mes y día sin conversión UTC
+                <div className="relative w-full focus-within:text-[#0076aa]">
+                  <DatePicker
+                    selected={fechaDoc && fechaDoc.match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(fechaDoc + 'T00:00:00') : null}
+                    onChange={(date: Date | null) => {
+                      if (date) {
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, '0');
                         const day = String(date.getDate()).padStart(2, '0');
-                        const iso = `${year}-${month}-${day}`;
-
-                        setFechaDoc(iso);
-                        setIsCalendarOpen(false); // Cierra el calendario
-                      }}
-                      locale={es}
-                      initialFocus
-                      classNames={{
-                        day_selected: "bg-[#0076aa] text-white hover:bg-[#005a85] hover:text-white focus:bg-[#0076aa] focus:text-white",
-                        day_today: "bg-gray-100 text-gray-900 font-semibold",
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                        setFechaDoc(`${year}-${month}-${day}`);
+                      } else {
+                        setFechaDoc("");
+                      }
+                    }}
+                    className="w-full px-4 py-2 pl-12 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                    // NO MOVER wrapperClassName - es necesario para el estilo del datepicker
+                    wrapperClassName="w-full"
+                    required
+                    disabled={isSubmitting}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="DD/MM/AAAA"
+                    locale="es"
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors pointer-events-none">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+                      />
+                    </svg>
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Fila de Año, Hora y Estatus */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Año */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Año
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Año
@@ -524,7 +593,7 @@ export default function DocumentosModal({
                   disabled={isSubmitting}
                   placeholder="2024"
                 />
-              </div>
+              </div> */}
 
               {/* Hora del documento */}
               <div>
@@ -671,20 +740,20 @@ export default function DocumentosModal({
               </div>
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 URL de consulta
               </label>
               <input
-                type="url"
+                type="text"
                 value={urlConsDoc}
-                onChange={(e) => setUrlConsDoc(e.target.value)}
+                onChange={handleUrlChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                 disabled={isSubmitting}
                 placeholder="https://drive.google.com/file/d/1a2B3c4D5e6F7g8H9/view"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Llenar en caso de subir un archivo mediante Google Drive o enlace similar
+              <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                <span>Llenar en caso de subir un archivo mediante Google Drive o enlace similar</span>
               </p>
             </div>
 
@@ -795,10 +864,10 @@ export default function DocumentosModal({
                   id="confidencial"
                   checked={confidencialDoc}
                   onChange={(e) => setConfidencialDoc(e.target.checked)}
-                  className="w-4 h-4 text-[#0076aa] border-gray-300 rounded focus:ring-[#0076aa]"
+                  className="w-4 h-4 border border-default-medium rounded-xs bg-white-secondary-medium focus:ring-2 focus:ring-brand-soft"
                   disabled={isSubmitting}
                 />
-                <label htmlFor="confidencial" className="ml-2 text-sm font-medium text-gray-700">
+                <label htmlFor="confidencial" className="select-none ms-2 text-sm font-medium text-heading">
                   Documento confidencial
                 </label>
               </div>

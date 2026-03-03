@@ -9,6 +9,7 @@ import { PERMISOS } from "@/lib/permisos";
 import DocumentosModal from "@/components/DocumentosModal";
 import HeaderAll from "@/components/HeaderAll";
 import ExitoFooter from "@/components/ExitoFooter";
+import LoadingState from "@/components/LoadingState";
 
 interface TipoDocumento {
   id_documento: number;
@@ -293,8 +294,6 @@ export default function DocumentosPage() {
     fetchDocumentos(filters);
   };
 
-
-
   const limpiarFiltros = () => {
     setFiltroSecretaria("");
     setFiltroTipo("");
@@ -306,19 +305,13 @@ export default function DocumentosPage() {
 
   if (loading && documentos.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0b3b60]">
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-white text-xl">Cargando...</div>
-          <br></br>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0076aa]"></div>
-        </div>
-      </div>
+      <LoadingState />
     );
   }
 
   if (error && documentos.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b3b60] p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-primary p-4">
         <div className="bg-white p-8 rounded-lg shadow-xl max-w-md text-center">
           {/* Icono de candado */}
           <div className="flex justify-center mb-4">
@@ -353,7 +346,7 @@ export default function DocumentosPage() {
           {/* Botón de retorno */}
           <Link
             href="/"
-            className="inline-block px-6 py-3 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
+            className="inline-block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
           >
             ⬅️ Volver al inicio
           </Link>
@@ -363,7 +356,7 @@ export default function DocumentosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b3b60] flex flex-col">
+    <div className="min-h-screen bg-primary flex flex-col">
       <HeaderAll showMenuButton={true} />
 
       <main className="flex-1 p-4">
@@ -658,8 +651,13 @@ export default function DocumentosPage() {
                             <p className="text-gray-900 font-semibold">{documento.nombre_tipo_documento || "-"}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-600 font-medium mb-1">Año</p>
-                            <p className="text-gray-900 font-semibold">{documento.anio_doc || "-"}</p>
+                            <p className="text-sm text-gray-600 font-medium mb-1">Fecha</p>
+                          <p className="text-gray-900 font-medium">
+                            {documento.fecha_doc
+                              ? new Date(documento.fecha_doc).toLocaleDateString('es-MX')
+                              : "-"
+                            }
+                          </p>
                           </div>
                         </div>
 
@@ -671,20 +669,15 @@ export default function DocumentosPage() {
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-600 font-medium mb-1">Fecha</p>
-                          <p className="text-gray-900 font-medium">
-                            {documento.fecha_doc
-                              ? new Date(documento.fecha_doc).toLocaleDateString('es-MX')
-                              : "-"
-                            }
-                          </p>
+                          {/* <p className="text-sm text-gray-600 font-medium mb-1">Año</p> */}
+                            {/* <p className="text-gray-900 font-semibold">{documento.anio_doc || "-"}</p> */}
                         </div>
                       </div>
 
                       {/* Acciones */}
                       <div className="flex items-center justify-between border-t border-gray-100 pt-4">
                         <button
-                          onClick={() => documento.url_cons_doc && window.open(documento.url_cons_doc, "_blank")}
+                          onClick={() => documento.id_doc && window.open(`/api/documentos/${documento.id_doc}/archivo`, "_blank")}
                           className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-600 hover:text-white font-medium rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-600"
                         >
                           <svg

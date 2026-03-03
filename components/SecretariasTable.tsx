@@ -122,7 +122,7 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <button
                       onClick={() => openModal(secretaria)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#408740] to-[#00ae6f] text-white rounded-lg text-sm font-medium hover:from-[#367335] hover:to-[#009960] transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#408740] focus:ring-offset-2"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#408740] text-white rounded-lg text-sm font-medium hover:from-[#367335] hover:to-[#009960] transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#408740] focus:ring-offset-2"
                       aria-label={`Ver dependencias de ${secretaria.nombre_secretaria}`}
                     >
                       <svg
@@ -153,10 +153,10 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 border-t border-gray-200 pt-4">
           {/* Información de página */}
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="font-medium text-gray-900">Página {currentPage}</span>
+          <div className="flex items-center gap-2 text-sm text-white">
+            <span className="font-medium text-white-900">Página {currentPage}</span>
             <span>de</span>
-            <span className="font-medium text-gray-900">{totalPages}</span>
+            <span className="font-medium text-white-900">{totalPages}</span>
           </div>
 
           {/* Controles de navegación */}

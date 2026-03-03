@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { getPool, hasPermission } from '@/lib/db';
+import { createUserIfNotExists, getPool, hasPermission } from '@/lib/db';
 import { PERMISOS } from '@/lib/permisos';
 
 // Obtener todos los usuarios con sus roles
@@ -65,6 +65,98 @@ export async function GET(request: NextRequest) {
     console.error('Error al obtener usuarios:', error);
     return NextResponse.json(
       { error: 'Error al obtener usuarios' },
+      { status: 500 }
+    );
+  }
+}
+
+// Crear un usuario (p.ej. alta por CURP desde Admin)
+export async function POST(request: NextRequest) {
+  try {
+    const token = await getTokenFromCookies();
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Token inválido' },
+        { status: 401 }
+      );
+    }
+
+    // Verificar permiso para crear/editar usuarios
+    const canEditUsers = await hasPermission(payload.id_rol, PERMISOS.EDITAR_USUARIOS);
+    if (!canEditUsers) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para crear usuarios' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const curp = String(body?.curp || '').trim().toUpperCase();
+    const id_general = String(body?.id_general || '').trim();
+    const nombre_usuario = body?.nombre_usuario ? String(body.nombre_usuario).trim() : undefined;
+    const id_rol = body?.id_rol ? Number(body.id_rol) : undefined;
+
+    if (!curp || !id_general) {
+      return NextResponse.json(
+        { error: 'Se requieren curp e id_general' },
+        { status: 400 }
+      );
+    }
+
+    if (id_rol && Number.isNaN(id_rol)) {
+      return NextResponse.json(
+        { error: 'id_rol inválido' },
+        { status: 400 }
+      );
+    }
+
+    // Si viene rol, validar que exista
+    if (id_rol) {
+      const pool = getPool();
+      const roleCheck = await pool.query(
+        'SELECT id_roles FROM roles WHERE id_roles = $1',
+        [id_rol]
+      );
+      if (roleCheck.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'El rol especificado no existe' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const user = await createUserIfNotExists({
+      curp,
+      id_general,
+      id_rol,
+      nombre_usuario,
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'No se pudo crear el usuario' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error('Error al crear usuario:', error);
+    return NextResponse.json(
+      { error: 'Error al crear usuario' },
       { status: 500 }
     );
   }

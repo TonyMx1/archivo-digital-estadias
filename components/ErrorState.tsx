@@ -6,7 +6,7 @@ interface ErrorStateProps {
 
 export default function ErrorState({ error }: ErrorStateProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b3b60] p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-primary p-4">
       <div className="bg-red-600 text-white p-6 rounded-lg shadow-lg max-w-md">
         <h2 className="text-xl font-bold mb-4">Error</h2>
         <p className="mb-4">{error}</p>

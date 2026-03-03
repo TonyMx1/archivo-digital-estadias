@@ -1,12 +1,11 @@
 "use client";
 
 import HeaderAll from "@/components/HeaderAll";
-import ExitoFooter from "@/components/ExitoFooter";
 
 export default function AcercaDePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b3b60]">
-      {/* <HeaderAll showMenuButton={true} showBackButton={true} /> */}
+      <HeaderAll showMenuButton={true} />
 
       {/* Contenido principal */}
       <main className="flex-1 bg-[#0b3b60] p-4 pb-0">
@@ -22,7 +21,7 @@ export default function AcercaDePage() {
           {/* Contenido del proyecto */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">Archivo Digital Municipal</h2>
-            <p className="text-white/90 text-lg leading-relaxed mb-6">
+            <p className="text-white/90 text-lg leading-relaxed mb-6 text-justify">
               Sistema integral de gestión de archivos digitales diseñado para modernizar y optimizar 
               la administración documental del municipio. Esta plataforma permite la organización, 
               consulta y control eficiente de documentos oficiales.
@@ -102,6 +101,10 @@ export default function AcercaDePage() {
                       <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
                     </svg>
                   </a>
+                  <br />
+                  <a href='https://ko-fi.com/Z8Z31V8WMT' target='_blank' className='inline-block'>
+                    <img height='36' style={{border:'0px', height:'36px'}} src='https://storage.ko-fi.com/cdn/kofi3.png?v=6' alt='Buy Me a Coffee at ko-fi.com' />
+                  </a>
                 </div>
               </div>
 
@@ -143,29 +146,29 @@ export default function AcercaDePage() {
 
           {/* Información del proyecto */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Contexto del Proyecto</h2>
-            <div className="grid md:grid-cols-2 gap-6">
+            <h2 className="text-2xl font-bold text-white mb-4 text-center">Contexto del Proyecto</h2>
+            <div className="grid md:grid-cols-3 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-[#df1783] mb-2">Período de Estadías</h3>
+                <h3 className="text-lg font-semibold text-[#408740] mb-2">Período de Estadías</h3>
                 <p className="text-white/80">
-                  Enero 2026 - Arbil 2026
+                  Enero 2026 - Abril 2026
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-[#00ae6f] mb-2">Institución</h3>
-                <p className="text-white/80">
-                  Universidad Tecnológica de San Juan del Río
+                <h3 className="text-lg text-center font-semibold text-[#00ae6f] mb-2">Institución</h3>
+                <p className="text-white/80 text-center">
+                    <img src="/utsjr.png" alt="Logo" className="w-60" />
                 </p>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-[#0076aa] mb-2">Municipio Colaborador</h3>
-                <p className="text-white/80">
+              {/* <div>
+                <h3 className="text-lg text-center font-semibold text-[#0076aa] mb-2">Municipio Colaborador</h3>
+                <p className="text-white/80 text-center">
                   San Juan del Río, Querétaro
                 </p>
-              </div>
+              </div> */}
               <div>
-                <h3 className="text-lg font-semibold text-[#e67425] mb-2">Supervisor</h3>
-                <p className="text-white/80">
+                <h3 className="text-lg text-center font-semibold text-[#e67425] mb-2">Supervisor</h3>
+                <p className="text-white/80 text-center">
                   Isc. Héctor Saldaña Benitez
                 </p>
               </div>

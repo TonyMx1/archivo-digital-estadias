@@ -20,7 +20,7 @@ export default function PaginationControls({
     <>
       {/* Información de paginación */}
       {totalItems > 0 && (
-        <div className="mt-4 text-sm text-white">
+        <div className="mt-4 text-sm text-black">
           Mostrando {startIndex + 1} - {Math.min(endIndex, totalItems)} de {totalItems} usuarios
         </div>
       )}
@@ -31,7 +31,7 @@ export default function PaginationControls({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-4 py-2 bg-[#0076aa] text-white font-semibold rounded-lg hover:bg-[#005a85] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          className="px-4 py-2 bg-[#0076aa] text-black font-semibold rounded-lg hover:bg-[#005a85] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
           Anterior
         </button>
@@ -50,7 +50,7 @@ export default function PaginationControls({
                   onClick={() => onPageChange(page)}
                   className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${
                     currentPage === page
-                      ? 'bg-[#0076aa] text-white'
+                      ? 'bg-[#0076aa] text-black'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ExitoFooter from '@/components/ExitoFooter';
-// import AdminMenu from '@/components/AdminMenu';
-// import AdminHeader from '@/components/AdminHeader';
+
 import HeaderAll from '@/components/HeaderAll';
 import UsersTable from '@/components/UsersTable';
 import PaginationControls from '@/components/PaginationControls';
@@ -30,6 +29,15 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'roles'>('usuarios');
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [isAddUserByCurpOpen, setIsAddUserByCurpOpen] = useState(false);
+  const [curpToLookup, setCurpToLookup] = useState('');
+  const [isLookingUpCurp, setIsLookingUpCurp] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupRawData, setLookupRawData] = useState<any>(null);
+  const [newUserIdGeneral, setNewUserIdGeneral] = useState('');
+  const [newUserNombre, setNewUserNombre] = useState('');
+  const [newUserRolId, setNewUserRolId] = useState<number | null>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   
   // Estado para gestión de roles y permisos
   const [rolesConPermisos, setRolesConPermisos] = useState<RolConPermisos[]>([]);
@@ -49,6 +57,135 @@ export default function AdminPage() {
   // Función helper para verificar permisos con ADMIN_TOTAL
   const hasPermission = (permission: string) => {
     return userPermissions.includes(PERMISOS.ADMIN_TOTAL) || userPermissions.includes(permission);
+  };
+
+  const resetAddUserByCurpModal = () => {
+    setCurpToLookup('');
+    setIsLookingUpCurp(false);
+    setLookupError(null);
+    setLookupRawData(null);
+    setNewUserIdGeneral('');
+    setNewUserNombre('');
+    setNewUserRolId(null);
+    setIsCreatingUser(false);
+  };
+
+  const closeAddUserByCurpModal = () => {
+    setIsAddUserByCurpOpen(false);
+    resetAddUserByCurpModal();
+  };
+
+  const extractCusFields = (raw: any) => {
+    const root = raw?.data ?? raw;
+    const data = root?.data ?? root;
+
+    const idGeneralCandidate =
+      data?.id_usuario_general ??
+      data?.id_general ??
+      root?.id_usuario_general ??
+      root?.id_general ??
+      '';
+
+    const nombreCandidate =
+      data?.nombre_completo ??
+      data?.nombre ??
+      root?.nombre_completo ??
+      root?.nombre ??
+      '';
+
+    return {
+      id_general: String(idGeneralCandidate || '').trim(),
+      nombre_usuario: String(nombreCandidate || '').trim(),
+    };
+  };
+
+  const handleLookupCurp = async () => {
+    setLookupError(null);
+    setLookupRawData(null);
+    setNewUserIdGeneral('');
+    setNewUserNombre('');
+
+    const curp = curpToLookup.trim().toUpperCase();
+    if (!curp) {
+      setLookupError('Ingresa una CURP');
+      return;
+    }
+
+    setIsLookingUpCurp(true);
+    try {
+      const response = await fetch('/api/cus/curp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ curp }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setLookupRawData(data);
+        const details = data?.details ? `\n${String(data.details).slice(0, 1000)}` : '';
+        throw new Error((data?.error || 'Error al consultar CURP') + details);
+      }
+
+      setLookupRawData(data?.data ?? data);
+      const extracted = extractCusFields(data?.data ?? data);
+      setNewUserIdGeneral(extracted.id_general);
+      setNewUserNombre(extracted.nombre_usuario);
+
+      // Default role: 9 (visitante) si existe, si no el primero
+      const defaultRole = roles.find(r => r.id_roles === 9) || roles[0];
+      setNewUserRolId(defaultRole ? defaultRole.id_roles : null);
+    } catch (error) {
+      setLookupError(error instanceof Error ? error.message : 'Error al consultar CURP');
+    } finally {
+      setIsLookingUpCurp(false);
+    }
+  };
+
+  const handleCreateUserFromCurp = async () => {
+    setLookupError(null);
+    const curp = curpToLookup.trim().toUpperCase();
+
+    if (!curp) {
+      setLookupError('CURP es requerida');
+      return;
+    }
+    if (!newUserIdGeneral.trim()) {
+      setLookupError('id_general es requerido');
+      return;
+    }
+    if (!newUserRolId) {
+      setLookupError('Selecciona un rol');
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          curp,
+          id_general: newUserIdGeneral.trim(),
+          nombre_usuario: newUserNombre.trim() || undefined,
+          id_rol: newUserRolId,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Error al crear usuario');
+      }
+
+      alert('Usuario agregado exitosamente');
+      closeAddUserByCurpModal();
+      window.location.reload();
+    } catch (error) {
+      setLookupError(error instanceof Error ? error.message : 'Error al crear usuario');
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   // Cargar permisos del usuario actual
@@ -268,44 +405,60 @@ export default function AdminPage() {
   if (error) return <ErrorState error={error} />;
 
   return (
-    <div className="min-h-screen bg-[#0b3b60] relative overflow-x-hidden">
+    <div className="min-h-screen bg-primary relative overflow-x-hidden">
       <HeaderAll showMenuButton={true} />
 
         <main className="flex-1 p-4">
           <div className="max-w-7xl mx-auto">
             {/* Tabs de navegación */}
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => setActiveTab('usuarios')}
-                className={`px-6 py-3 rounded-t-lg font-semibold transition-colors ${
-                  activeTab === 'usuarios'
-                    ? 'bg-white text-[#0b3b60]'
-                    : 'bg-[#0076aa] text-white hover:bg-[#005a85]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                  Usuarios
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('usuarios')}
+                  className={`px-6 py-3 rounded-t-lg font-semibold transition-colors ${
+                    activeTab === 'usuarios'
+                      ? 'bg-[#0b3b60] text-primary'
+                      : 'bg-[#0076aa] text-white hover:bg-[#005a85]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    Usuarios
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('roles')}
+                  className={`px-6 py-3 rounded-t-lg font-semibold transition-colors ${
+                    activeTab === 'roles'
+                      ? 'bg-[#0b3b60] text-primary'
+                      : 'bg-[#0076aa] text-white hover:bg-[#005a85]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Roles y Permisos
+                  </div>
+                </button>
+              </div>
+
+              {activeTab === 'usuarios' && hasPermission(PERMISOS.EDITAR_USUARIOS) && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setIsAddUserByCurpOpen(true)}
+                    className="px-4 py-2 bg-[#00ae6f] text-white font-semibold rounded-lg hover:bg-[#408740] transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Añadir usuario por CURP
+                  </button>
                 </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('roles')}
-                className={`px-6 py-3 rounded-t-lg font-semibold transition-colors ${
-                  activeTab === 'roles'
-                    ? 'bg-white text-[#0b3b60]'
-                    : 'bg-[#0076aa] text-white hover:bg-[#005a85]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Roles y Permisos
-                </div>
-              </button>
+              )}
             </div>
 
             {/* Contenido de la pestaña Usuarios */}
@@ -332,51 +485,153 @@ export default function AdminPage() {
               </>
             )}
 
+            {isAddUserByCurpOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
+                  <div className="bg-[#0076aa] text-white px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold">Añadir usuario por CURP</h2>
+                      <p className="text-sm text-white/90">Consulta la CUS y registra en el sistema</p>
+                    </div>
+                    <button
+                      onClick={closeAddUserByCurpModal}
+                      className="text-white hover:bg-[#005a85] rounded-lg p-2 transition-colors"
+                      aria-label="Cerrar"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    {lookupError && (
+                      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        {lookupError}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={curpToLookup}
+                        onChange={(e) => setCurpToLookup(e.target.value)}
+                        placeholder="CURP"
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 placeholder:!text-gray-500 placeholder:!opacity-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                        disabled={isLookingUpCurp || isCreatingUser}
+                      />
+                      <button
+                        onClick={handleLookupCurp}
+                        disabled={isLookingUpCurp || isCreatingUser}
+                        type="button"
+                        className="px-4 py-2 bg-[#0076aa] text-white font-semibold rounded-lg hover:bg-[#005a85] transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isLookingUpCurp && (
+                          <svg
+                            className="w-5 h-5 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              d="M4 12a8 8 0 018-8"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        )}
+                        {isLookingUpCurp ? 'Consultando...' : 'Consultar'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">ID General</label>
+                        <input
+                          type="text"
+                          value={newUserIdGeneral}
+                          onChange={(e) => setNewUserIdGeneral(e.target.value)}
+                          
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 placeholder:!text-gray-500 placeholder:!opacity-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                          disabled={isCreatingUser}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre Completo</label>
+                        <input
+                          type="text"
+                          value={newUserNombre}
+                          onChange={(e) => setNewUserNombre(e.target.value)}
+                          
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 placeholder:!text-gray-500 placeholder:!opacity-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                          disabled={isCreatingUser}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Asignar Rol</label>
+                        <select
+                          value={newUserRolId ?? ''}
+                          onChange={(e) => setNewUserRolId(e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-sm text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={isCreatingUser}
+                        >
+                          <option value="" disabled>Selecciona un rol</option>
+                          {roles.map((role) => (
+                            <option key={role.id_roles} value={role.id_roles}>
+                              {role.rol}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* {lookupRawData && (
+                      <details className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <summary className="cursor-pointer text-sm font-semibold text-gray-700">Ver respuesta del CUS</summary>
+                        <pre className="mt-2 text-xs text-gray-700 overflow-auto max-h-60">{JSON.stringify(lookupRawData, null, 2)}</pre>
+                      </details>
+                    )} */}
+
+                    <div className="flex gap-3 justify-end pt-2">
+                      {/* <button
+                        onClick={closeAddUserByCurpModal}
+                        disabled={isCreatingUser || isLookingUpCurp}
+                        className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button> */}
+                      <button
+                        onClick={handleCreateUserFromCurp}
+                        disabled={isCreatingUser || isLookingUpCurp}
+                        className="px-4 py-2 bg-[#00ae6f] text-white font-semibold rounded-lg hover:bg-[#408740] transition-colors disabled:opacity-50"
+                      >
+                        {isCreatingUser ? 'Guardando...' : 'Agregar usuario'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Contenido de la pestaña Roles y Permisos */}
             {activeTab === 'roles' && (
               <div className="bg-white rounded-2xl shadow-2xl p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold text-[#0b3b60]">Gestión de Roles y Permisos</h2>
-                  {/* <button
-                    onClick={() => setShowAddRoleForm(true)}
-                    className="px-4 py-2 bg-[#0076aa] text-white font-semibold rounded-lg hover:bg-[#005a85] transition-all shadow-lg flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Agregar Rol
-                  </button> */}
+                  <h2 className="text-xl font-bold text-gray-500">Gestión de Roles y Permisos</h2>
+                  
                 </div>
 
-                {/* Formulario para agregar nuevo rol */}
-                {showAddRoleForm && (
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h3 className="font-semibold text-gray-900 mb-3">Nuevo Rol</h3>
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={newRoleName}
-                        onChange={(e) => setNewRoleName(e.target.value)}
-                        placeholder="Nombre del nuevo rol"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00b2e2] text-gray-900 bg-white"
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddRole()}
-                      />
-                      <button
-                        onClick={handleAddRole}
-                        disabled={isSubmittingRole}
-                        className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {isSubmittingRole ? 'Agregando...' : 'Agregar'}
-                      </button>
-                      <button
-                        onClick={() => { setShowAddRoleForm(false); setNewRoleName(''); }}
-                        className="px-4 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )}
+                
 
                 {loadingPermisos ? (
                   <div className="text-center py-8">
@@ -387,14 +642,14 @@ export default function AdminPage() {
                   <div className="space-y-4">
                     {/* Lista de roles */}
                     {rolesConPermisos.map((rol) => (
-                      <div key={rol.id_rol} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div key={rol.id_rol} className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
                         {/* Header del rol */}
                         <button
                           onClick={() => setSelectedRol(selectedRol === rol.id_rol ? null : rol.id_rol)}
-                          className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                          className="w-full flex items-center justify-between p-4 hover:bg-gray-100 transition-colors"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center w-10 h-10 bg-[#0b3b60] text-white rounded-full text-sm font-semibold">
+                            <div className="flex items-center justify-center w-10 h-10 bg-[#408740] text-white rounded-full text-sm font-semibold">
                               {rol.id_rol}
                             </div>
                             <div className="text-left">
@@ -417,7 +672,7 @@ export default function AdminPage() {
 
                         {/* Panel de permisos expandible */}
                         {selectedRol === rol.id_rol && (
-                          <div className="p-4 border-t border-gray-200 bg-white">
+                          <div className="p-4 border-t border-gray-200 bg-grey">
                             <p className="text-sm text-gray-600 mb-4">
                               Activa o desactiva los permisos para este rol. Los cambios se aplican inmediatamente.
                             </p>

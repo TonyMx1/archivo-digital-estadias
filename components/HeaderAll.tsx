@@ -23,11 +23,12 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
 
   pageTitle = "Sistema de gestión de archivos digitales",
   pageSubtitle = "Administración documental electrónica",
-  showLogo = false,
+  showLogo = true,
   showMenuButton = false,
 }) => {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [roleName, setRoleName] = useState<string | null>(null);
@@ -51,6 +52,28 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
     };
     fetchUserInfo();
   }, []);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('[data-profile-menu="container"]')) return;
+      setIsProfileMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsProfileMenuOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -77,7 +100,9 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       href: '/',
       label: 'Inicio',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5"
+        fill="none"
+        stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         </svg>
       ),
@@ -118,7 +143,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
     <>
       {/* Menú lateral */}
       <div
-        className={`fixed top-0 left-0 h-full w-72 bg-[#0b3b60] shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 left-0 h-full w-72 bg-[#0076aa] shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         <div className="flex flex-col flex-center h-full">
@@ -159,7 +184,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                   <Link
                     href={item.href}
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-white font-medium rounded-lg hover:bg-[#0076aa] transition-all duration-200"
+                    className="flex items-center gap-3 w-full px-4 py-3 text-white font-medium rounded-lg hover:bg-white/10 transition-all duration-200 border border-transparent hover:border-white"
                   >
                     {item.icon}
                     <span>{item.label}</span>
@@ -281,7 +306,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </button>
             )}
 
-            {/* Botón Volver */}
+            {/* Botón Volver
             {!showMenuButton && showBackButton && (
               <Link
                 href={backHref}
@@ -291,10 +316,9 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                 <span className="text-lg"><Image src="/volver-flecha.png" alt="Arrow Left" width={25} height={25} /></span>
                 <span className="font-medium text-sm sm:text-base">{backText}</span>
               </Link>
-            )}
+            )} */}
 
-            {/* Espacio si no hay botón */}
-            {!showMenuButton && !showBackButton && <div className="w-24"></div>}
+            
 
             {/* Logo + Título */}
             <div className="flex items-center justify-center gap-3 flex-1 min-w-0">
@@ -323,9 +347,104 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </div>
             </div>
 
-            {/* Espacio Derecho */}
-            <div className="w-16 flex-shrink-0"></div>
+            <div className="w-16 flex-shrink-0 flex justify-end" data-profile-menu="container">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen((v) => !v)}
+                  className="text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors"
+                  aria-label="Menú de usuario"
+                  aria-haspopup="menu"
+                  aria-expanded={isProfileMenuOpen}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                    className="w-6 h-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                    />
+                  </svg>
+                </button>
 
+                {isProfileMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-black/10 overflow-hidden"
+                    role="menu"
+                  >
+                    {(userName || roleName) && (
+                      <div className="px-4 py-3 border-b border-black/10">
+                        {userName && (
+                          <p className="text-sm font-semibold text-[#0b3b60] whitespace-normal break-words">
+                            {userName}
+                          </p>
+                        )}
+                        {roleName && (
+                          <p className="text-xs text-black/60 whitespace-normal break-words">
+                            {roleName}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      disabled={isLoggingOut}
+                      className="w-full px-4 py-3 text-left text-sm text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      {isLoggingOut ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          <span>Cerrando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
+                          </svg>
+                          <span>Cerrar sesión</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            
           </div>
         </div>
       </header>

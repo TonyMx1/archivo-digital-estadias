@@ -25,6 +25,11 @@ const dbConfig = {
   user: process.env.DB_USER || '',
   password: process.env.DB_PASSWORD || '',
   ssl: useSSL ? { rejectUnauthorized: false } : false,
+  // Límites de conexión para evitar agotar el pool
+  max: 20, // Máximo número de conexiones en el pool
+  min: 2,  // Mínimo número de conexiones mantenidas
+  idleTimeoutMillis: 30000, // Tiempo antes de cerrar conexiones inactivas (30 segundos)
+  connectionTimeoutMillis: 10000, // Tiempo máximo para establecer conexión (10 segundos)
 };
 
 
@@ -35,8 +40,35 @@ let pool: Pool | null = null;
 export function getPool(): Pool {
   if (!pool) {
     pool = new Pool(dbConfig);
+    
+    // Manejar errores del pool
+    pool.on('error', (err) => {
+      console.error('Error inesperado en el pool de PostgreSQL:', err);
+    });
+    
+    // Limpiar el pool cuando el proceso termine
+    process.on('SIGINT', async () => {
+      console.log('Recibido SIGINT, cerrando pool de conexiones...');
+      await closePool();
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', async () => {
+      console.log('Recibido SIGTERM, cerrando pool de conexiones...');
+      await closePool();
+      process.exit(0);
+    });
   }
   return pool;
+}
+
+// Función para cerrar el pool de conexiones
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+    console.log('Pool de conexiones cerrado');
+  }
 }
 
 // Función para verificar la conexión
@@ -84,9 +116,11 @@ export async function authenticateUser(curp: string, password: string) {
 
 // Función para obtener información de usuario por CURP
 export async function getUserByCurp(curp: string) {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
-    const result = await pool.query(
+    const result = await client.query(
       `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario 
        FROM usuarios 
        WHERE curp = $1`,
@@ -101,14 +135,18 @@ export async function getUserByCurp(curp: string) {
   } catch (error) {
     console.error('Error al obtener usuario:', error);
     throw error;
+  } finally {
+    client.release();
   }
 }
 
 // Función para obtener información de usuario por id_usuarios
 export async function getUserById(idUsuarios: number) {
+  const pool = getPool();
+  const client = await pool.connect();
+  
   try {
-    const pool = getPool();
-    const result = await pool.query(
+    const result = await client.query(
       `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario 
        FROM usuarios 
        WHERE id_usuarios = $1`,
@@ -123,6 +161,8 @@ export async function getUserById(idUsuarios: number) {
   } catch (error) {
     console.error('Error al obtener usuario por ID:', error);
     throw error;
+  } finally {
+    client.release();
   }
 }
 

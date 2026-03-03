@@ -27,7 +27,7 @@ export default function ExitoFooter() {
             <p className="text-white/90 text-sm sm:text-base">
               Sistema de Archivo para la Administración Municipal
             </p>
-            
+
             {/* <p className="text-white/60 text-xs">
               Archivos Digitales
             </p> */}
@@ -37,14 +37,14 @@ export default function ExitoFooter() {
 
         {/* Copyright centrado */}
         <div className="mt-4 pt-3 border-t border-white/10">
-  <div className="text-white/40 text-xs flex items-center justify-center gap-1 flex-wrap">
-    <span>© {new Date().getFullYear()} Municipio de San Juan del Río. Todos los derechos reservados.</span>
-    <span className="mx-1">•</span>
-    <a href="/acerca-de" className="text-white/60 hover:text-white transition-colors">
-      Acerca de...
-    </a>
-  </div>
-</div>
+          <div className="text-white/40 text-xs flex items-center justify-center gap-1 flex-wrap">
+            <span>© {new Date().getFullYear()} Municipio de San Juan del Río. Todos los derechos reservados.</span>
+            <span className="mx-1">•</span>
+            <a href="/acerca-de" className="text-white/60 hover:text-white transition-colors">
+              Acerca de ésta página
+            </a>
+          </div>
+        </div>
       </div>
     </footer>
   );

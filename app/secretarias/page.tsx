@@ -27,9 +27,9 @@ export default function SecretariasPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0b3b60]">
+      <div className="min-h-screen flex items-center justify-center bg-primary">
         <div className="flex flex-col items-center justify-center">
-          <div className="text-white text-xl">Cargando...</div>
+          <div className="text-black text-xl">Cargando...</div>
           <br></br>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0076aa]"></div>
         </div>
@@ -39,7 +39,7 @@ export default function SecretariasPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b3b60] p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-primary p-4">
         <div className="bg-white p-8 rounded-lg shadow-xl max-w-md text-center">
           {/* Icono de candado */}
           <div className="flex justify-center mb-4">
@@ -74,7 +74,7 @@ export default function SecretariasPage() {
           {/* Botón de retorno */}
           <Link
             href="/"
-            className="inline-block px-6 py-3 bg-[#0b3b60] text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
+            className="inline-block px-6 py-3 bg-primary text-black font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
           >
             ⬅️ Volver al inicio
           </Link>
@@ -84,13 +84,13 @@ export default function SecretariasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b3b60] flex flex-col">
+    <div className="min-h-screen bg-primary flex flex-col">
       <HeaderAll showMenuButton={true} />
 
       <main className="flex-1 p-4">
         <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-6">
-            <h2 className="text-xl font-bold text-[#0b3b60] mb-6 pl-8">
+          <div className="bg-[#0b3b60] rounded-2xl shadow-2xl p-6">
+            <h2 className="text-xl font-bold text-primary mb-6 pl-8">
               SECRETARÍAS
             </h2>
 
