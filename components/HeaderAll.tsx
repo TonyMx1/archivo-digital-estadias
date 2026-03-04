@@ -101,8 +101,8 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       label: 'Inicio',
       icon: (
         <svg className="w-5 h-5"
-        fill="none"
-        stroke="currentColor" viewBox="0 0 24 24">
+          fill="none"
+          stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         </svg>
       ),
@@ -154,14 +154,14 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                 {/* <h2 className="text-white font-bold text-sm">Archivo Digital</h2> */}
 
               </div>
-              <Image
+              {/* <Image
                 src="/legado.png"
                 alt="SJR Legado de Bien Común"
                 width={140}
                 height={140}
                 className="object-contain"
                 priority
-              />
+              /> */}
               <p className="text-white/70 text-xs">Menú de navegación</p>
               <button
                 onClick={() => setIsMenuOpen(false)}
@@ -174,7 +174,6 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </button>
             </div>
           </div>
-
 
           {/* Contenido del menú */}
           <nav className="flex-1 p-4 overflow-y-auto">
@@ -318,7 +317,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </Link>
             )} */}
 
-            
+
 
             {/* Logo + Título */}
             <div className="flex items-center justify-center gap-3 flex-1 min-w-0">
@@ -357,18 +356,42 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                   aria-haspopup="menu"
                   aria-expanded={isProfileMenuOpen}
                 >
+                  {/* <Image
+                    src="/icons/user-circle.svg"
+                    alt='User'
+                    width={20}
+                    height={20}
+                    className='w-8 h-8'
+                  /> */}
                   <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
                     viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                    stroke="currentColor"
-                    className="w-6 h-6"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-9 h-9"
                   >
+                    <circle
+                      opacity="0.5"
+                      cx="12"
+                      cy="9"
+                      r="3"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+
                     <path
+                      opacity="0.5"
+                      d="M17.9691 20C17.81 17.1085 16.9247 15 11.9999 15C7.07521 15 6.18991 17.1085 6.03076 20"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
                       strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                     />
                   </svg>
                 </button>
@@ -391,6 +414,8 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                           </p>
                         )}
                       </div>
+
+
                     )}
 
                     <button
@@ -444,7 +469,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                 )}
               </div>
             </div>
-            
+
           </div>
         </div>
       </header>

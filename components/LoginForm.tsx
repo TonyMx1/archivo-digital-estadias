@@ -71,14 +71,14 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               {/* Mobile */}
               <div className="flex items-center gap-4 sm:hidden">
                 <Image src="/logo_white.png" alt="Logo" width={80} height={21} />
-                <Image src="/legado.png" alt="Legado" width={80} height={21} />
+                <Image src="/logo-Photoroom.png" alt="Legado" width={80} height={21} />
               </div>
             </div>
             
             {/* Desktop */}
             <div className="hidden sm:flex flex-row items-center gap-4 mt-4">
               <Image src="/logo_white.png" alt="Logo" width={160} height={56} />
-              <Image src="/legado.png" alt="Legado" width={160} height={56} />
+              <Image src="/logo-Photoroom.png" alt="Legado" width={146} height={52} />
             </div>
           </div>
 

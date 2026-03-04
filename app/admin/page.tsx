@@ -29,6 +29,19 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'roles'>('usuarios');
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [alertModal, setAlertModal] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    isOpen: boolean;
+    reloadOnClose?: boolean;
+  }>({ message: '', type: 'info', isOpen: false, reloadOnClose: false });
+  const [confirmModal, setConfirmModal] = useState<{
+    message: string;
+    isOpen: boolean;
+    onConfirm: () => void;
+  }>({ message: '', isOpen: false, onConfirm: () => {} });
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const [isAddUserByCurpOpen, setIsAddUserByCurpOpen] = useState(false);
   const [curpToLookup, setCurpToLookup] = useState('');
   const [isLookingUpCurp, setIsLookingUpCurp] = useState(false);
@@ -57,6 +70,42 @@ export default function AdminPage() {
   // Función helper para verificar permisos con ADMIN_TOTAL
   const hasPermission = (permission: string) => {
     return userPermissions.includes(PERMISOS.ADMIN_TOTAL) || userPermissions.includes(permission);
+  };
+
+  useEffect(() => {
+    if (alertModal.isOpen) {
+      const frame = requestAnimationFrame(() => setAlertVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setAlertVisible(false);
+  }, [alertModal.isOpen]);
+
+  useEffect(() => {
+    if (confirmModal.isOpen) {
+      const frame = requestAnimationFrame(() => setConfirmVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setConfirmVisible(false);
+  }, [confirmModal.isOpen]);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', reloadOnClose = false) => {
+    setAlertModal({ message, type, isOpen: true, reloadOnClose });
+  };
+
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmModal({ message, isOpen: true, onConfirm });
+  };
+
+  const closeAlert = () => {
+    const shouldReload = Boolean(alertModal.reloadOnClose);
+    setAlertModal({ message: '', type: 'info', isOpen: false, reloadOnClose: false });
+    if (shouldReload) {
+      window.location.reload();
+    }
+  };
+
+  const closeConfirm = () => {
+    setConfirmModal({ message: '', isOpen: false, onConfirm: () => {} });
   };
 
   const resetAddUserByCurpModal = () => {
@@ -178,9 +227,8 @@ export default function AdminPage() {
         throw new Error(data?.error || 'Error al crear usuario');
       }
 
-      alert('Usuario agregado exitosamente');
+      showAlert('Usuario agregado exitosamente', 'success', true);
       closeAddUserByCurpModal();
-      window.location.reload();
     } catch (error) {
       setLookupError(error instanceof Error ? error.message : 'Error al crear usuario');
     } finally {
@@ -209,33 +257,32 @@ export default function AdminPage() {
 
   // Función para eliminar usuario
   const handleDeleteUser = async (userId: number, userName: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al usuario "${userName}"? Esta acción no se puede deshacer.`)) {
-      return;
-    }
+    showConfirm(
+      `¿Estás seguro de que deseas eliminar al usuario "${userName}"? Esta acción no se puede deshacer.`,
+      async () => {
+        setDeletingUserId(userId);
+        try {
+          const response = await fetch(`/api/admin/users`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id_usuarios: userId }),
+          });
 
-    setDeletingUserId(userId);
-    try {
-      const response = await fetch(`/api/admin/users`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id_usuarios: userId }),
-      });
-
-      if (response.ok) {
-        alert('Usuario eliminado exitosamente');
-        // Recargar la página para actualizar la lista
-        window.location.reload();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al eliminar usuario');
+          if (response.ok) {
+            showAlert('Usuario eliminado exitosamente', 'success', true);
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al eliminar usuario');
+          }
+        } catch (error) {
+          showAlert(error instanceof Error ? error.message : 'Error al eliminar usuario', 'error');
+        } finally {
+          setDeletingUserId(null);
+        }
       }
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al eliminar usuario');
-    } finally {
-      setDeletingUserId(null);
-    }
+    );
   };
 
   // Cargar permisos de todos los roles
@@ -279,9 +326,9 @@ export default function AdminPage() {
     setUpdatingUserId(userId);
     try {
       await updateUserRole(userId, newRoleId);
-      alert('Rol actualizado exitosamente');
+      showAlert('Rol actualizado exitosamente', 'success');
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al actualizar el rol');
+      showAlert(error instanceof Error ? error.message : 'Error al actualizar el rol', 'error');
     } finally {
       setUpdatingUserId(null);
     }
@@ -313,11 +360,11 @@ export default function AdminPage() {
           return rol;
         }));
       } else {
-        alert(data.error || 'Error al actualizar permiso');
+        showAlert(data.error || 'Error al actualizar permiso', 'error');
       }
     } catch (error) {
       console.error('Error al actualizar permiso:', error);
-      alert('Error al actualizar permiso');
+      showAlert('Error al actualizar permiso', 'error');
     } finally {
       setUpdatingPermiso(null);
     }
@@ -325,7 +372,7 @@ export default function AdminPage() {
 
   const handleAddRole = async () => {
     if (!newRoleName.trim()) {
-      alert('Por favor ingresa un nombre para el rol');
+      showAlert('Por favor ingresa un nombre para el rol', 'error');
       return;
     }
 
@@ -348,15 +395,14 @@ export default function AdminPage() {
         }]);
         setNewRoleName('');
         setShowAddRoleForm(false);
-        alert('Rol agregado exitosamente');
+        showAlert('Rol agregado exitosamente', 'success', true);
         // Recargar la página para actualizar la lista de roles
-        window.location.reload();
       } else {
-        alert('Error al agregar el rol: ' + (data.error || 'Error desconocido'));
+        showAlert('Error al agregar el rol: ' + (data.error || 'Error desconocido'), 'error');
       }
     } catch (error) {
       console.error('Error al agregar rol:', error);
-      alert('Error al agregar el rol');
+      showAlert('Error al agregar el rol', 'error');
     } finally {
       setIsSubmittingRole(false);
     }
@@ -623,6 +669,119 @@ export default function AdminPage() {
               </div>
             )}
 
+            {alertModal.isOpen && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-opacity-50 backdrop-blur-sm">
+                <div
+                  className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 ease-out ${
+                    alertVisible
+                      ? "opacity-100 scale-100 translate-y-0"
+                      : "opacity-0 scale-95 translate-y-2"
+                  }`}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div
+                        className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                          alertModal.type === 'success'
+                            ? 'bg-green-100'
+                            : alertModal.type === 'error'
+                              ? 'bg-red-100'
+                              : 'bg-blue-100'
+                        }`}
+                      >
+                        {alertModal.type === 'success' ? (
+                          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                          </svg>
+                        ) : alertModal.type === 'error' ? (
+                          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        ) : (
+                          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0 1 18 0z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h3
+                          className={`text-lg font-semibold ${
+                            alertModal.type === 'success'
+                              ? 'text-green-800'
+                              : alertModal.type === 'error'
+                                ? 'text-red-800'
+                                : 'text-blue-800'
+                          }`}
+                        >
+                          {alertModal.type === 'success'
+                            ? 'Éxito'
+                            : alertModal.type === 'error'
+                              ? 'Error'
+                              : 'Información'}
+                        </h3>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mb-6">{alertModal.message}</p>
+                    <button
+                      onClick={closeAlert}
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                        alertModal.type === 'success'
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : alertModal.type === 'error'
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {confirmModal.isOpen && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-opacity-50 backdrop-blur-sm">
+                <div
+                  className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 ease-out ${
+                    confirmVisible
+                      ? "opacity-100 scale-100 translate-y-0"
+                      : "opacity-0 scale-95 translate-y-2"
+                  }`}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800">Confirmar Acción</h3>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mb-6">{confirmModal.message}</p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={closeConfirm}
+                        className="flex-1 px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => {
+                          confirmModal.onConfirm();
+                          closeConfirm();
+                        }}
+                        className="flex-1 px-4 py-2 bg-[#0076aa] text-white font-medium rounded-lg hover:bg-[#005a85] transition-colors"
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Contenido de la pestaña Roles y Permisos */}
             {activeTab === 'roles' && (
               <div className="bg-white rounded-2xl shadow-2xl p-6">
@@ -630,8 +789,6 @@ export default function AdminPage() {
                   <h2 className="text-xl font-bold text-gray-500">Gestión de Roles y Permisos</h2>
                   
                 </div>
-
-                
 
                 {loadingPermisos ? (
                   <div className="text-center py-8">

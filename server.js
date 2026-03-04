@@ -17,6 +17,6 @@ app.prepare().then(() => {
       console.error('Error al iniciar el servidor:', err);
       throw err;
     }
-    console.log(`> Next.js app running on port ${port}`);
+    console.log('> Next.js app running on port ${port}');
   });
 });
