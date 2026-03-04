@@ -148,21 +148,21 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       >
         <div className="flex flex-col flex-center h-full">
           {/* Encabezado del menú */}
-          <div className="bg-[#0076aa] px-4 py-5">
-            <div className="flex flex-col items-center gap-3">
+          <div className="bg-[#0076aa] px-4 py-4">
+            <div className="flex flex-col items-center gap-2">
               <div className="text-center">
-                {/* <h2 className="text-white font-bold text-sm">Archivo Digital</h2> */}
-
+                
               </div>
-              {/* <Image
+              <Image
                 src="/legado.png"
                 alt="SJR Legado de Bien Común"
-                width={140}
-                height={140}
+                width={110}
+                height={110}
                 className="object-contain"
-                priority
-              /> */}
-              <p className="text-white/70 text-xs">Menú de navegación</p>
+                // priority
+              />
+              <p className="text-white/80 text-sm text-bold">Menú de navegación</p>
+              <div className="border-b border-white/20 w-full"></div>
               <button
                 onClick={() => setIsMenuOpen(false)}
                 className="absolute top-4 right-4 text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors"
@@ -172,6 +172,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+
             </div>
           </div>
 

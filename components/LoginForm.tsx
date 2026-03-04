@@ -63,7 +63,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           <div className="flex flex-col justify-center items-center rounded-2xl bg-[#0b3b60] p-8 ring-1 ring-white/10 backdrop-blur-sm">
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <div>
-                <h1 className="font-sans text-2xl sm:text-3xl font-bold text-white text-center sm:text-left">Archivo Digital</h1>
+                <h1 className="font-sans text-2xl sm:text-4xl font-bold text-white text-center sm:text-left">Archivo Digital</h1>
                 <p className="italic tracking-normal font-sans mt-1 text-white/80 text-center sm:text-left">
                   Sistema de gestión de archivos digitales
                 </p>
@@ -74,7 +74,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                 <Image src="/logo-Photoroom.png" alt="Legado" width={80} height={21} />
               </div>
             </div>
-            
+            <br />
             {/* Desktop */}
             <div className="hidden sm:flex flex-row items-center gap-4 mt-4">
               <Image src="/logo_white.png" alt="Logo" width={160} height={56} />
@@ -111,7 +111,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                     </label>
                     <div className="flex shadow-sm rounded-lg border border-gray-300 bg-white">
                       <span className="inline-flex items-center px-3 text-sm text-gray-600 bg-gray-50 border-r border-gray-300 rounded-l-lg">
-                        <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                        <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                       </span>
                       <input
                         ref={curpInputRef}
@@ -160,7 +160,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                     </label>
                     <div className="flex shadow-sm rounded-lg border border-gray-300 bg-white relative">
                       <span className="inline-flex items-center px-3 text-sm text-gray-600 bg-gray-50 border-r border-gray-300 rounded-l-lg">
-                        <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
+                        <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
                       </span>
                       <input
                         ref={passwordInputRef}
