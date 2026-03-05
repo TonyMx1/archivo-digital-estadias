@@ -494,7 +494,7 @@ export default function DocumentosPage() {
 
 
       <main className="flex-1 p-4">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Barra de búsqueda y filtros */}
           <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
             <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -711,7 +711,7 @@ export default function DocumentosPage() {
 
             {loading ? (
               // Skeleton loading state
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 min-h-[780px] content-start">
+              <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8 min-h-[780px] content-start">
                 {Array.from({ length: 6 }).map((_, index) => (
                   <DocumentoSkeleton key={index} />
                 ))}
@@ -735,12 +735,12 @@ export default function DocumentosPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">No hay documentos registrados</h3>
                 <p className="text-gray-600 max-w-md mx-auto mb-6">
-                  Comienza agregando documentos al sistema para organizar la información
+                  {/* Comienza agregando documentos al sistema para organizar la información */}
                 </p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 min-h-[780px] content-start">
+                <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8 min-h-[780px] content-start">
                   {documentosPaginados.map((documento) => (
                     <div
                       key={documento.id_doc}
@@ -850,7 +850,7 @@ export default function DocumentosPage() {
                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                               />
                             </svg>
-                            Ver Archivo
+                            Ver archivo
                           </button>
                           <button
                             onClick={() => handleVerDetalles(documento)}
@@ -1187,7 +1187,7 @@ export default function DocumentosPage() {
                 onClick={handleCloseDetallesModal}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1322,7 +1322,7 @@ export default function DocumentosPage() {
                 </div>
               )}
 
-              {/* URL de consulta */}
+              {/* URL de consulta
               {detallesDocumento.url_cons_doc && (
                 <div>
                   <label className="text-sm font-medium text-gray-600">URL de Consulta</label>
@@ -1335,18 +1335,18 @@ export default function DocumentosPage() {
                     {detallesDocumento.url_cons_doc}
                   </a>
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 bg-gray-50">
+            {/* <div className="flex justify-end p-6 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={handleCloseDetallesModal}
                 className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
               >
                 Cerrar
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
       )}

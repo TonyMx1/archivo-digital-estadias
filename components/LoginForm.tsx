@@ -134,11 +134,16 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         id="curp"
                         name="curp"
                         value={formData.curp}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          const upperValue = e.target.value.toUpperCase();
+                          e.target.value = upperValue;
+                          handleChange(e);
+                        }}
                         onCopy={handleBlockClipboard}
                         onPaste={handleBlockClipboard}
                         onCut={handleBlockClipboard}
                         onContextMenu={handleBlockContextMenu}
+                        style={{ textTransform: 'uppercase' }}
                         className={`block w-full px-3 py-2.5 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500 ${curpLength > 0 && curpLength !== 18
                           ? 'border-red-300 bg-red-50'
                           : 'bg-white'
