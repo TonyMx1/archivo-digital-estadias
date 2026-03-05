@@ -9,13 +9,32 @@ type Secretaria = {
 
 type SecretariasTableProps = {
   secretarias: Secretaria[];
+  loading?: boolean;
 };
 
-export default function SecretariasTable({ secretarias }: SecretariasTableProps) {
+export default function SecretariasTable({ secretarias, loading = false }: SecretariasTableProps) {
   const [selectedSecretaria, setSelectedSecretaria] = useState<Secretaria | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10); // Puedes cambiar a 5 si prefieres
+
+  // Skeleton component for table rows
+  const TableRowSkeleton = () => (
+    <tr className="animate-pulse">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-8"></div>
+      </td>
+      <td className="px-6 py-4">
+        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded-full w-16"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center">
+        <div className="h-8 bg-gray-200 rounded-lg w-28 mx-auto"></div>
+      </td>
+    </tr>
+  );
 
   const openModal = (secretaria: Secretaria) => {
     setSelectedSecretaria(secretaria);
@@ -88,7 +107,12 @@ export default function SecretariasTable({ secretarias }: SecretariasTableProps)
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedSecretarias.length === 0 ? (
+            {loading ? (
+              // Show skeleton rows when loading
+              Array.from({ length: itemsPerPage }).map((_, index) => (
+                <TableRowSkeleton key={index} />
+              ))
+            ) : paginatedSecretarias.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-2">

@@ -70,21 +70,34 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               </div>
               {/* Mobile */}
               <div className="flex items-center gap-4 sm:hidden">
-                <Image src="/logo_white.png" alt="Logo" width={80} height={21} />
-                <Image src="/logo-Photoroom.png" alt="Legado" width={80} height={21} />
+                <Image src="/logo_white.png" alt="Logo" width={80} height={21} style={{ width: 'auto', height: 'auto' }} />
+                <Image src="/logo-Photoroom.png" alt="Legado" width={80} height={21} style={{ width: 'auto', height: 'auto' }} />
               </div>
             </div>
             <br />
             {/* Desktop */}
-            <div className="hidden sm:flex flex-row items-center gap-4 mt-4">
-              <Image src="/logo_white.png" alt="Logo" width={160} height={56} />
-              <Image src="/logo-Photoroom.png" alt="Legado" width={146} height={52} />
+            <div className="hidden sm:flex flex-row items-center gap-4 mt-2">
+              <Image
+                src="/logo_white.png"
+                alt="Logo"
+                width={150}
+                height={56}
+                className="h-32 w-auto object-contain"
+              />
+              <Image
+                src="/logo-Photoroom.png"
+                alt="Legado"
+                width={150}
+                height={56}
+                className="h-28 w-auto object-contain"
+              />
             </div>
+
           </div>
 
           <div className="flex items-center justify-center">
             <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-black/10 border border-gray-100">
-              <div className="rounded-xl border border-gray-200 p-6 space-y-6 bg-white shadow-sm">
+              <div className="rounded-xl border border-gray-200 p-5 space-y-4 bg-white shadow-sm flex flex-col flex-grow">
                 <div className="text-center space-y-2">
                   <div className="flex items-center justify-center gap-3">
                     {/* <div className="h-10 w-10 rounded-xl bg-[#0b3b60] text-white flex items-center justify-center font-bold">
@@ -101,11 +114,11 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5 max-w-sm mx-auto">
-                  <div className=" rounded-xl p-4 border border-gray-200">
+                <form onSubmit={handleSubmit} className="space-y-3 max-w-sm mx-auto flex-1">
+                  <div className=" rounded-xl p-3 border border-gray-200">
                     <label
                       htmlFor="curp"
-                      className="block text-lg font-medium text-[#0b3b60] mb-2.5 pl-4"
+                      className="block text-lg font-medium text-[#0b3b60] mb-2 pl-4"
                     >
                       CURP
                     </label>
@@ -136,8 +149,8 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                       />
                     </div>
                     {curpLength > 0 && curpLength !== 18 && (
-                      <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                        <p className="text-sm text-red-600 text-center" aria-live="polite">
+                      <div className="mt-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                        <p className="text-xs text-red-600 text-center" aria-live="polite">
                           {curpLength < 18
                             ? `Faltan ${18 - curpLength} caracteres (requiere 18 caracteres)`
                             : `Tiene ${curpLength - 18} carácter${curpLength - 18 > 1 ? 'es' : ''} de más (requiere 18 caracteres)`}
@@ -145,8 +158,8 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                       </div>
                     )}
                     {curpLength === 18 && (
-                      <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                        <p className="text-sm text-center text-green-600">CURP válido ✅</p>
+                      <div className="mt-1 bg-green-50 border border-green-200 rounded-lg px-2 py-1">
+                        <p className="text-xs text-center text-green-600">CURP válido ✅</p>
                       </div>
                     )}
                   </div>
@@ -302,7 +315,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                   </button>
                 </form>
 
-                <div className="text-center space-y-2 pt-4 border-t border-gray-200 bg-gray-50 rounded-lg px-4 py-3">
+                <div className="text-center space-y-1 pt-3 border-t border-gray-200 bg-gray-50 rounded-lg px-3 py-2 mt-auto">
                   <a
                     href="https://cus.sanjuandelrio.gob.mx/tramites-sjr/public/forgot-password.html"
                     className="text-sm text-[#0076aa] hover:text-[#00b2e2] transition-colors font-medium"

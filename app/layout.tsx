@@ -1,18 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ActivityTracker } from "@/components/ActivityTracker";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { SessionTimer } from "@/components/SessionTimer";
 
 export const metadata: Metadata = {
   title: "Archivo Digital",
@@ -34,9 +23,10 @@ export default function RootLayout({
   return (
     <html data-theme="cerberus" lang="es" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`antialiased`}
       >
         <ActivityTracker />
+        <SessionTimer sessionTimeout={30} warningTime={2} />
         {children}
       </body>
     </html>

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
 import { useSecretarias } from "@/hooks/useSecretarias";
 import { PERMISOS } from "@/lib/permisos";
 import DocumentosModal from "@/components/DocumentosModal";
-import HeaderAll from "@/components/HeaderAll";
-import ExitoFooter from "@/components/ExitoFooter";
-import LoadingState from "@/components/LoadingState";
+
+
+
 
 interface TipoDocumento {
   id_documento: number;
@@ -24,6 +24,8 @@ export default function DocumentosPage() {
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
+  const [detallesDocumento, setDetallesDocumento] = useState<Documento | null>(null);
+  const [modalDetallesOpen, setModalDetallesOpen] = useState(false);
 
   // Estados de búsqueda y filtros
   const [searchQuery, setSearchQuery] = useState("");
@@ -224,21 +226,99 @@ export default function DocumentosPage() {
     }
   }, [promptModal.isOpen]);
 
-  // Filtrar documentos por búsqueda
-  const documentosFiltrados = documentos.filter((doc) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const metaText = getMetaDocSearchText((doc as any).meta_doc).toLowerCase();
-    return (
-      doc.nombre_doc?.toLowerCase().includes(query) ||
-      doc.nombre_tipo_documento?.toLowerCase().includes(query) ||
-      doc.nombre_secretaria?.toLowerCase().includes(query) ||
-      doc.anio_doc?.includes(query) ||
-      doc.oficio_doc?.toLowerCase().includes(query) ||
-      doc.expediente_doc?.toLowerCase().includes(query) ||
-      metaText.includes(query)
-    );
+  // Estado para resultados de búsqueda
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<{
+    documentos: Documento[];
+    coincidenciasTitulo: number;
+    coincidenciasContenido: number;
+    mensajeEspecial?: string;
+  }>({
+    documentos: [],
+    coincidenciasTitulo: 0,
+    coincidenciasContenido: 0
   });
+
+  // Filtrar documentos por búsqueda usando useMemo
+  const { documentosFiltrados, coincidenciasTitulo, coincidenciasContenido, mensajeEspecial } = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return {
+        documentosFiltrados: documentos,
+        coincidenciasTitulo: 0,
+        coincidenciasContenido: 0,
+        mensajeEspecial: undefined
+      };
+    }
+
+    const query = searchQuery.toLowerCase();
+    const docsConCoincidenciaTitulo: Documento[] = [];
+    const docsConCoincidenciaContenido: Documento[] = [];
+    
+    documentos.forEach((doc) => {
+      const metaText = getMetaDocSearchText((doc as any).meta_doc).toLowerCase();
+      
+      // Verificar coincidencia en título o campos principales
+      const coincideEnTitulo = 
+        doc.nombre_doc?.toLowerCase().includes(query) ||
+        doc.nombre_tipo_documento?.toLowerCase().includes(query) ||
+        doc.nombre_secretaria?.toLowerCase().includes(query) ||
+        doc.oficio_doc?.toLowerCase().includes(query) ||
+        doc.expediente_doc?.toLowerCase().includes(query);
+      
+      // Verificar coincidencia en contenido
+      const coincideEnContenido = metaText.includes(query);
+      
+      if (coincideEnTitulo) {
+        docsConCoincidenciaTitulo.push(doc);
+      }
+      
+      if (coincideEnContenido) {
+        docsConCoincidenciaContenido.push(doc);
+      }
+    });
+
+    // Eliminar duplicados (documentos que coinciden en título y contenido)
+    const docsUnicosContenido = docsConCoincidenciaContenido.filter(
+      doc => !docsConCoincidenciaTitulo.some(tituloDoc => tituloDoc.id_doc === doc.id_doc)
+    );
+
+    // Si hay coincidencias en título, mostrar esas
+    if (docsConCoincidenciaTitulo.length > 0) {
+      return {
+        documentosFiltrados: docsConCoincidenciaTitulo,
+        coincidenciasTitulo: docsConCoincidenciaTitulo.length,
+        coincidenciasContenido: docsConCoincidenciaContenido.length,
+        mensajeEspecial: `Se encontraron ${docsConCoincidenciaTitulo.length} documentos que contienen "${searchQuery}" en el título${docsConCoincidenciaContenido.length > docsConCoincidenciaTitulo.length ? ` y ${docsConCoincidenciaContenido.length - docsConCoincidenciaTitulo.length} adicionales en el contenido.` : '.'}`
+      };
+    }
+    
+    // Si no hay coincidencias en título pero hay en contenido, mostrar todos los de contenido
+    if (docsUnicosContenido.length > 0) {
+      return {
+        documentosFiltrados: docsUnicosContenido,
+        coincidenciasTitulo: 0,
+        coincidenciasContenido: docsConCoincidenciaContenido.length,
+        mensajeEspecial: `No se encontraron documentos con "${searchQuery}" en el título, pero se encontraron ${docsConCoincidenciaContenido.length} documentos que contienen esta palabra en su contenido.`
+      };
+    }
+    
+    // No hay coincidencias en ningún lugar
+    return {
+      documentosFiltrados: [],
+      coincidenciasTitulo: 0,
+      coincidenciasContenido: 0,
+      mensajeEspecial: `No se encontraron documentos que contengan "${searchQuery}" ni en título ni en contenido.`
+    };
+  }, [searchQuery, documentos]);
+
+  // Actualizar el estado de resultados cuando cambian los valores del memo
+  useEffect(() => {
+    setResultadosBusqueda({
+      documentos: documentosFiltrados,
+      coincidenciasTitulo,
+      coincidenciasContenido,
+      mensajeEspecial
+    });
+  }, [documentosFiltrados, coincidenciasTitulo, coincidenciasContenido, mensajeEspecial]);
 
   // Paginación
   const totalPages = Math.ceil(documentosFiltrados.length / itemsPerPage);
@@ -254,6 +334,11 @@ export default function DocumentosPage() {
   const handleEditarDocumento = (documento: Documento) => {
     setEditingDocumento(documento);
     setModalOpen(true);
+  };
+
+  const handleVerDetalles = (documento: Documento) => {
+    setDetallesDocumento(documento);
+    setModalDetallesOpen(true);
   };
 
   const handleEliminarDocumento = async (idDoc: number) => {
@@ -281,6 +366,11 @@ export default function DocumentosPage() {
     setEditingDocumento(null);
   };
 
+  const handleCloseDetallesModal = () => {
+    setModalDetallesOpen(false);
+    setDetallesDocumento(null);
+  };
+
   // ✅ NUEVA FUNCIÓN: Se ejecuta solo cuando se guarda exitosamente
   const handleDocumentoGuardado = () => {
     // Recargar con los filtros actuales
@@ -301,13 +391,57 @@ export default function DocumentosPage() {
     setFiltroEstatus("Activo");
     setSearchQuery("");
     setCurrentPage(1);
+    // Reiniciar estado de búsqueda
+    setResultadosBusqueda({
+      documentos: [],
+      coincidenciasTitulo: 0,
+      coincidenciasContenido: 0
+    });
   };
 
-  if (loading && documentos.length === 0) {
-    return (
-      <LoadingState />
-    );
-  }
+  // Skeleton loading component
+  const DocumentoSkeleton = () => (
+    <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 animate-pulse">
+      {/* Encabezado con ícono y etiquetas */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+          <div className="flex-1">
+            <div className="h-6 bg-gray-200 rounded-lg mb-2 w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded-full w-20"></div>
+          </div>
+        </div>
+        <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+      </div>
+
+      {/* Información del documento */}
+      <div className="space-y-4 mb-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="h-4 bg-gray-200 rounded mb-1 w-12"></div>
+            <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+          </div>
+          <div>
+            <div className="h-4 bg-gray-200 rounded mb-1 w-12"></div>
+            <div className="h-5 bg-gray-200 rounded w-2/3"></div>
+          </div>
+        </div>
+        <div>
+          <div className="h-4 bg-gray-200 rounded mb-1 w-16"></div>
+          <div className="h-5 bg-gray-200 rounded w-full"></div>
+        </div>
+      </div>
+
+      {/* Acciones */}
+      <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+        <div className="h-10 bg-gray-200 rounded-lg w-24"></div>
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-9 bg-gray-200 rounded-lg"></div>
+          <div className="h-9 w-9 bg-gray-200 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
+  );
 
   if (error && documentos.length === 0) {
     return (
@@ -357,7 +491,7 @@ export default function DocumentosPage() {
 
   return (
     <div className="min-h-screen bg-primary flex flex-col">
-      <HeaderAll showMenuButton={true} />
+
 
       <main className="flex-1 p-4">
         <div className="max-w-6xl mx-auto">
@@ -552,12 +686,22 @@ export default function DocumentosPage() {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-2xl font-bold text-gray-900 break-words">DOCUMENTOS</h2>
-                  {/* <p className="text-gray-600 text-sm">Gestión documental del sistema</p> */}
+                  {searchQuery.trim() && mensajeEspecial && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        {mensajeEspecial}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-lg font-semibold text-gray-900">
-                  {documentosFiltrados.length} documentos
+                  {searchQuery.trim() ? (
+                    `${documentosFiltrados.length} resultados`
+                  ) : (
+                    `${documentosFiltrados.length} documentos`
+                  )}
                 </p>
                 <p className="text-sm text-gray-600">
                   Mostrando {documentosPaginados.length} por página
@@ -565,7 +709,14 @@ export default function DocumentosPage() {
               </div>
             </div>
 
-            {documentosFiltrados.length === 0 ? (
+            {loading ? (
+              // Skeleton loading state
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 min-h-[780px] content-start">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <DocumentoSkeleton key={index} />
+                ))}
+              </div>
+            ) : documentosFiltrados.length === 0 ? (
               <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl">
                 <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-white rounded-full shadow-lg">
                   <svg
@@ -589,7 +740,7 @@ export default function DocumentosPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 min-h-[780px] content-start">
                   {documentosPaginados.map((documento) => (
                     <div
                       key={documento.id_doc}
@@ -652,12 +803,12 @@ export default function DocumentosPage() {
                           </div>
                           <div>
                             <p className="text-sm text-gray-600 font-medium mb-1">Fecha</p>
-                          <p className="text-gray-900 font-medium">
-                            {documento.fecha_doc
-                              ? new Date(documento.fecha_doc).toLocaleDateString('es-MX')
-                              : "-"
-                            }
-                          </p>
+                            <p className="text-gray-900 font-medium">
+                              {documento.fecha_doc
+                                ? new Date(documento.fecha_doc).toLocaleDateString('es-MX')
+                                : "-"
+                              }
+                            </p>
                           </div>
                         </div>
 
@@ -670,37 +821,57 @@ export default function DocumentosPage() {
 
                         <div>
                           {/* <p className="text-sm text-gray-600 font-medium mb-1">Año</p> */}
-                            {/* <p className="text-gray-900 font-semibold">{documento.anio_doc || "-"}</p> */}
+                          {/* <p className="text-gray-900 font-semibold">{documento.anio_doc || "-"}</p> */}
                         </div>
                       </div>
-
                       {/* Acciones */}
                       <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                        <button
-                          onClick={() => documento.id_doc && window.open(`/api/documentos/${documento.id_doc}/archivo`, "_blank")}
-                          className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-600 hover:text-white font-medium rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-600"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => documento.id_doc && window.open(`/api/documentos/${documento.id_doc}/archivo`, "_blank")}
+                            className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-600 hover:text-white font-medium rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-600"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                          Ver Archivo
-                        </button>
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                            Ver Archivo
+                          </button>
+                          <button
+                            onClick={() => handleVerDetalles(documento)}
+                            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium rounded-lg transition-all duration-200 border border-gray-200 hover:border-gray-300"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            Detalles
+                          </button>
+                        </div>
 
                         <div className="flex items-center gap-2">
                           {canEditarDocumentos && (
@@ -753,116 +924,79 @@ export default function DocumentosPage() {
                 </div>
 
                 {/* Versión simplificada que siempre funciona */}
-                {totalPages > 1 && (
-                  <div className="mt-8 pt-6 border-t border-gray-200 [border-left:none] [border-right:none]">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm text-gray-600">
-                        <span className="font-semibold text-gray-900">
-                          {startIndex + 1}-{Math.min(endIndex, documentosFiltrados.length)}
-                        </span>{" "}
-                        de{" "}
-                        <span className="font-semibold text-gray-900">
-                          {documentosFiltrados.length}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        Página <span className="font-semibold text-[#0076aa]">{currentPage}</span> de{" "}
-                        <span className="font-semibold">{totalPages}</span>
-                      </div>
+                {/* Paginación siempre visible */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-sm text-gray-600">
+                      <span className="font-semibold text-gray-900">
+                        {documentosFiltrados.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, documentosFiltrados.length)}
+                      </span>{" "}
+                      de{" "}
+                      <span className="font-semibold text-gray-900">
+                        {documentosFiltrados.length}
+                      </span>
                     </div>
-
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1}
-                        className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Primera página"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                        </svg>
-                      </button>
-
-                      <button
-                        onClick={() => setCurrentPage(p => p - 1)}
-                        disabled={currentPage === 1}
-                        className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Anterior"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-
-                      <div className="flex items-center gap-1 mx-2">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setCurrentPage(pageNum)}
-                              className={`w-9 h-9 flex items-center justify-center text-sm rounded-md transition-colors ${currentPage === pageNum
-                                ? "bg-[#0076aa] text-white font-semibold"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <button
-                        onClick={() => setCurrentPage(p => p + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Siguiente"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-
-                      <button
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Última página"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                    <div className="text-sm text-gray-600">
+                      Página <span className="font-semibold text-[#0076aa]">{currentPage}</span>{" "}
+                      de <span className="font-semibold">{Math.max(totalPages, 1)}</span>
                     </div>
                   </div>
-                )}
+
+                  <div className="flex items-center justify-center gap-2">
+                    {/* Botón Primera página */}
+                    <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {/* ícono << */}
+                    </button>
+                    {/* Botón Anterior */}
+                    <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {/* ícono < */}
+                    </button>
+
+                    {Array.from({ length: Math.max(Math.min(5, totalPages), 1) }).map((_, i) => {
+                      let pageNum = 1;
+                      if (totalPages <= 5) pageNum = i + 1;
+                      else if (currentPage <= 3) pageNum = i + 1;
+                      else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                      else pageNum = currentPage - 2 + i;
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-9 h-9 flex items-center justify-center text-sm rounded-md transition-colors ${currentPage === pageNum
+                              ? "bg-[#0076aa] text-white font-semibold"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    {/* Botón Siguiente */}
+                    <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0} className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {/* ícono > */}
+                    </button>
+                    {/* Botón Última página */}
+                    <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="p-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {/* ícono >> */}
+                    </button>
+                  </div>
+                </div>
               </>
             )}
           </div>
         </div>
       </main>
 
-      <ExitoFooter />
-
       {/* Modal de alertas */}
       {alertModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
-          <div 
-            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${
-              alertVisible 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-2"
-            }`}
+          <div
+            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${alertVisible
+              ? "opacity-100 scale-100 translate-y-0"
+              : "opacity-0 scale-95 translate-y-2"
+              }`}
           >
             <div className="flex items-center gap-3 mb-4">
               {alertModal.type === 'success' && (
@@ -888,7 +1022,7 @@ export default function DocumentosPage() {
               )}
               <div>
                 <h3 className={`text-lg font-semibold ${alertModal.type === 'success' ? 'text-green-800' :
-                    alertModal.type === 'error' ? 'text-red-800' : 'text-blue-800'
+                  alertModal.type === 'error' ? 'text-red-800' : 'text-blue-800'
                   }`}>
                   {alertModal.type === 'success' ? 'Éxito' :
                     alertModal.type === 'error' ? 'Error' : 'Información'}
@@ -899,8 +1033,8 @@ export default function DocumentosPage() {
             <button
               onClick={closeAlert}
               className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
-                  alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
-                    'bg-blue-600 hover:bg-blue-700 text-white'
+                alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                  'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
             >
               Cerrar
@@ -912,12 +1046,11 @@ export default function DocumentosPage() {
       {/* Modal de confirmación */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xs">
-          <div 
-            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${
-              confirmVisible 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-2"
-            }`}
+          <div
+            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${confirmVisible
+              ? "opacity-100 scale-100 translate-y-0"
+              : "opacity-0 scale-95 translate-y-2"
+              }`}
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 flex items-center justify-center bg-yellow-100 rounded-full">
@@ -954,12 +1087,11 @@ export default function DocumentosPage() {
       {/* Modal de entrada de texto (prompt) */}
       {promptModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
-          <div 
-            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${
-              promptVisible 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-2"
-            }`}
+          <div
+            className={`bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform transition-all duration-300 ease-out ${promptVisible
+              ? "opacity-100 scale-100 translate-y-0"
+              : "opacity-0 scale-95 translate-y-2"
+              }`}
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-full">
@@ -1017,6 +1149,207 @@ export default function DocumentosPage() {
         isEditing={!!editingDocumento}
         isReadOnly={!canEditCurrentDocument}
       />
+
+      {/* Modal de detalles del documento */}
+      {modalDetallesOpen && detallesDocumento && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md">
+          <div
+            className={`bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto transform transition-all duration-300 ease-out ${
+              modalDetallesOpen
+                ? "opacity-100 scale-100 translate-y-0"
+                : "opacity-0 scale-95 translate-y-2"
+            }`}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-6 h-6 text-blue-600"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5h7.5a.75.75 0 0 0 0-1.5h-7.5Z"
+                      clipRule="evenodd"
+                    />
+                    <path d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Detalles del Documento</h2>
+                  <p className="text-sm text-gray-600">Información completa del documento</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseDetallesModal}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Información principal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Nombre del Documento</label>
+                    <p className="mt-1 text-gray-900 font-semibold">{detallesDocumento.nombre_doc || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Tipo de Documento</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.nombre_tipo_documento || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Secretaría</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.nombre_secretaria || "-"}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Fecha del Documento</label>
+                    <p className="mt-1 text-gray-900">
+                      {detallesDocumento.fecha_doc
+                        ? new Date(detallesDocumento.fecha_doc).toLocaleDateString('es-MX', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Hora</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.hora_doc || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Año</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.anio_doc || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Información adicional */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Número de Oficio</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.oficio_doc || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Número de Expediente</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.expediente_doc || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Serie</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.serie_doc || "-"}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Subserie</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.subserie_doc || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Consecutivo</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.cons_doc || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Versión</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.version_doc || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estatus y confidencialidad */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Estatus</label>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
+                      detallesDocumento.estatus_doc === "Activo"
+                        ? "bg-green-100 text-green-800"
+                        : detallesDocumento.estatus_doc === "Inactivo"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                    }`}>
+                      {detallesDocumento.estatus_doc || "-"}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Confidencial</label>
+                  <div className="mt-1">
+                    {detallesDocumento.confidencial_doc ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded-full">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Sí
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
+                        No
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Comentarios */}
+              {detallesDocumento.comentario_doc && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Comentarios</label>
+                  <p className="mt-1 text-gray-900 bg-gray-50 p-3 rounded-lg">{detallesDocumento.comentario_doc}</p>
+                </div>
+              )}
+
+              {/* Descripción */}
+              {detallesDocumento.desc_doc && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Descripción</label>
+                  <p className="mt-1 text-gray-900 bg-gray-50 p-3 rounded-lg">{detallesDocumento.desc_doc}</p>
+                </div>
+              )}
+
+              {/* URL de consulta */}
+              {detallesDocumento.url_cons_doc && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">URL de Consulta</label>
+                  <a 
+                    href={detallesDocumento.url_cons_doc} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="mt-1 text-blue-600 hover:text-blue-800 underline block break-all"
+                  >
+                    {detallesDocumento.url_cons_doc}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={handleCloseDetallesModal}
+                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

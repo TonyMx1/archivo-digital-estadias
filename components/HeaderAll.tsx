@@ -159,6 +159,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                 width={110}
                 height={110}
                 className="object-contain"
+                style={{ width: 'auto', height: 'auto' }}
                 // priority
               />
               <p className="text-white/80 text-sm text-bold">Menú de navegación</p>
@@ -289,7 +290,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       )}
 
       {/* Header */}
-      <header className="bg-[#0076aa] shadow-md w-full sticky top-0 z-50">
+      <header className="bg-[#0076aa] shadow-md w-full top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
 
@@ -368,7 +369,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-9 h-9"
+                    className="w-9.5 h-9.5"
                   >
                     <circle
                       opacity="0.5"

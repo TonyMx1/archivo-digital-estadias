@@ -1,24 +1,17 @@
 "use client";
 
-import HeaderAll from "@/components/HeaderAll";
-
 export default function AcercaDePage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b3b60]">
-      <HeaderAll showMenuButton={true} />
+    <div className="max-w-4xl mx-auto">
+      {/* Título principal */}
+      <div className="text-center mb-12 pt-8">
+        <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
+          Acerca de este Proyecto
+        </h1>
+        <div className="w-24 h-1 bg-[#e67425] mx-auto rounded-full"></div>
+      </div>
 
-      {/* Contenido principal */}
-      <main className="flex-1 bg-[#0b3b60] p-4 pb-0">
-        <div className="max-w-4xl mx-auto">
-          {/* Título principal */}
-          <div className="text-center mb-12 pt-8">
-            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-              Acerca de este Proyecto
-            </h1>
-            <div className="w-24 h-1 bg-[#e67425] mx-auto rounded-full"></div>
-          </div>
-
-          {/* Contenido del proyecto */}
+      <main>
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">Archivo Digital Municipal</h2>
             <p className="text-white/90 text-lg leading-relaxed mb-6 text-justify">
@@ -183,7 +176,6 @@ export default function AcercaDePage() {
               de nuestra comunidad.
             </p>
           </div>
-        </div>
       </main>
 
       <button 
@@ -206,10 +198,6 @@ export default function AcercaDePage() {
         Volver
       </button>
 
-      {/* Footer */}
-      {/* <footer>
-        <ExitoFooter />
-      </footer> */}
     </div>
   );
 }

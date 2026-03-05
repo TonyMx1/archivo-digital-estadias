@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSecretarias } from "@/hooks/useSecretarias";
-import ExitoFooter from "@/components/ExitoFooter";
-import HeaderAll from "@/components/HeaderAll";
 import SecretariasTable from "@/components/SecretariasTable";
 
 export default function SecretariasPage() {
@@ -24,18 +22,6 @@ export default function SecretariasPage() {
     setModalOpen(false);
     setSelectedSecretaria(null);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-primary">
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-black text-xl">Cargando...</div>
-          <br></br>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0076aa]"></div>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -84,22 +70,16 @@ export default function SecretariasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-primary flex flex-col">
-      <HeaderAll showMenuButton={true} />
-
-      <main className="flex-1 p-4">
-        <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto">
+      <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="bg-[#0b3b60] rounded-2xl shadow-2xl p-6">
-            <h2 className="text-xl font-bold text-primary mb-6 pl-8">
+            <h1 className="text-2xl font-semibold text-primary text-center mb-6 pl-8">
               SECRETARÍAS
-            </h2>
+            </h1>
 
-            <SecretariasTable secretarias={secretarias} />
+            <SecretariasTable secretarias={secretarias} loading={loading} />
           </div>
-        </div>
-      </main>
-
-      <ExitoFooter />
+      </div>
     </div>
   );
 }
