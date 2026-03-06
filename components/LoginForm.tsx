@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useLogin } from '@/hooks/useLogin';
-import LoginAndVisitanteFooter from './LoginAndVisitanteFooter';
 import { useEffect, useRef } from 'react';
 
 type LoginFormProps = {
@@ -96,7 +95,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
 
           <div className="flex items-center justify-center">
-            <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-black/10 border border-gray-100">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-black/10 border border-gray-100">
               <div className="rounded-xl border border-gray-200 p-5 space-y-4 bg-white shadow-sm flex flex-col flex-grow">
                 <div className="text-center space-y-2">
                   <div className="flex items-center justify-center gap-3">
@@ -144,7 +143,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         onCut={handleBlockClipboard}
                         onContextMenu={handleBlockContextMenu}
                         style={{ textTransform: 'uppercase' }}
-                        className={`block w-full px-3 py-2.5 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500 ${curpLength > 0 && curpLength !== 18
+                        className={`block w-full px-5 py-2.5 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500 ${curpLength > 0 && curpLength !== 18
                           ? 'border-red-300 bg-red-50'
                           : 'bg-white'
                           }`}

@@ -1,8 +1,12 @@
 "use client";
 
+import { useRouter } from 'next/navigation';
+
 export default function AcercaDePage() {
+  const router = useRouter();
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#0b3b60]">
+      <div className="max-w-4xl mx-auto">
       {/* Título principal */}
       <div className="text-center mb-12 pt-8">
         <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
@@ -179,7 +183,7 @@ export default function AcercaDePage() {
       </main>
 
       <button 
-        onClick={() => window.history.back()}
+        onClick={() => router.back()}
         className="fixed bottom-6 right-6 bg-gradient-to-r from-[#0076aa] to-[#005580] text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 group"
       >
         <svg 
@@ -198,6 +202,7 @@ export default function AcercaDePage() {
         Volver
       </button>
 
+      </div>
     </div>
   );
 }

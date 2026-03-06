@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ActivityTracker } from "@/components/ActivityTracker";
-import { SessionTimer } from "@/components/SessionTimer";
 
 export const metadata: Metadata = {
   title: "Archivo Digital",
@@ -26,7 +25,6 @@ export default function RootLayout({
         className={`antialiased`}
       >
         <ActivityTracker />
-        <SessionTimer sessionTimeout={30} warningTime={2} />
         {children}
       </body>
     </html>

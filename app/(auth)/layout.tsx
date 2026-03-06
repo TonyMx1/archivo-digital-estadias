@@ -1,5 +1,6 @@
 import HeaderAll from "@/components/HeaderAll";
 import ExitoFooter from "@/components/ExitoFooter";
+import { SessionTimer } from "@/components/SessionTimer";
 
 export default function AuthLayout({
   children,
@@ -8,6 +9,7 @@ export default function AuthLayout({
 }>) {
   return (
     <div className="min-h-screen flex flex-col bg-primary">
+      <SessionTimer sessionTimeout={30} warningTime={5} />
       <HeaderAll showMenuButton={true} showBackButton={false} />
       
       {/* Contenido principal */}
