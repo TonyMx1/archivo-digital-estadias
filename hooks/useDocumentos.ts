@@ -10,6 +10,7 @@ export interface Documento {
   comentario_doc?: string;
   id_secre: number;
   nombre_secretaria?: string;
+  nombre_dependencia?: string;
   id_usu_alta?: number;
   meta_doc?: string;
   desc_doc?: string;
@@ -20,17 +21,20 @@ export interface Documento {
   cons_doc?: string;
   confidencial_doc?: boolean;
   fecha_doc?: string;
-  hora_doc?: string;
   url_cons_doc?: string;
   estatus_doc?: string;
   motivo_baja_doc?: string;
   version_doc?: number;
+  id_dep?: number;
+  num_caja?: string;
+  ubicacion_doc?: string;
+  estante_doc?: string;
 }
 
 interface DocumentosFilters {
   id_secre?: number;
   tipo_doc?: number;
-  anio_doc?: string;
+  fecha_doc?: string;
   estatus_doc?: string;
 }
 
@@ -46,7 +50,7 @@ export function useDocumentos() {
       const params = new URLSearchParams();
       if (filters?.id_secre) params.append('id_secre', filters.id_secre.toString());
       if (filters?.tipo_doc) params.append('tipo_doc', filters.tipo_doc.toString());
-      if (filters?.anio_doc) params.append('anio_doc', filters.anio_doc);
+      if (filters?.fecha_doc) params.append('fecha_doc', filters.fecha_doc);
       if (filters?.estatus_doc) params.append('estatus_doc', filters.estatus_doc);
 
       const url = `/api/documentos${params.toString() ? `?${params.toString()}` : ''}`;
@@ -181,17 +185,9 @@ export function useDocumentos() {
   setError(null);
 
   try {
-    // 1️⃣ Validar tamaño (25 MB)
-    const sizeInMB = file.size / (1024 * 1024);
-    if (sizeInMB > 25) {
-      throw new Error(
-        `El archivo es demasiado grande (${sizeInMB.toFixed(2)} MB). Máximo 25 MB.`
-      );
-    }
-
     console.log('📤 Archivo a subir:', {
       nombre: file.name,
-      tamaño: sizeInMB.toFixed(2) + ' MB',
+      tamaño: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
       tipo: file.type,
     });
 

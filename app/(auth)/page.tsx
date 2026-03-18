@@ -13,7 +13,8 @@ export default function HomePage() {
     secretarias: 0,
     dependencias: 0,
     dependenciasActivas: null as number | null,
-    documentos: 0 // Nuevo campo
+    documentos: 0, // Nuevo campo
+    documentosPorSecretaria: [] as Array<{id_secretaria: number, nombre_secretaria: string, total_documentos: number}>
   });
 
   const [loadingStats, setLoadingStats] = useState(true);
@@ -68,10 +69,10 @@ export default function HomePage() {
       {/* Mensaje de bienvenida */}
       <div className="flex-1 flex flex-col justify-center py-8">
         <div className="text-center space-y-4 mb-12">
-          <h1 className="text-3xl lg:text-4xl font-bold text-[#0b3b60]">
+          {/* <h1 className="text-3xl lg:text-4xl font-bold text-[#0b3b60]">
             Archivo Digital
-          </h1>
-          <p className="text-lg lg:text-xl text-[#0b3b60]/90 px-5">
+          </h1> */}
+          <p className="font-bold text-lg lg:text-xl text-[#0b3b60]/90 px-5">
             Bienvenido al sistema de gestión de archivos digitales
           </p>
         </div>
@@ -230,6 +231,53 @@ export default function HomePage() {
             </>
           )}
         </div>
+
+        {/* Estadísticas por Secretaría */}
+        {!loadingStats && statistics.documentosPorSecretaria.length > 0 && (
+          <div className="mt-12 max-w-6xl mx-auto w-full px-4">
+            <h2 className="text-2xl font-bold text-[#0b3b60] mb-6 text-center">
+              Documentos por Secretaría
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {statistics.documentosPorSecretaria.map((secretaria) => (
+                <div
+                  key={secretaria.id_secretaria}
+                  className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow duration-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-800 text-lg mb-1">
+                        {secretaria.nombre_secretaria}
+                      </h3>
+                      <p className="text-3xl font-bold text-[#0076aa]">
+                        {secretaria.total_documentos}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        documento{secretaria.total_documentos !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className="text-[#0076aa] opacity-20">
+                      <svg
+                        className="w-12 h-12"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

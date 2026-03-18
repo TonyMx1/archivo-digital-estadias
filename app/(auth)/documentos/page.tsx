@@ -2,14 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
+
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
 import { useSecretarias } from "@/hooks/useSecretarias";
 import { PERMISOS } from "@/lib/permisos";
 import DocumentosModal from "@/components/DocumentosModal";
-
-
-
 
 interface TipoDocumento {
   id_documento: number;
@@ -31,7 +28,7 @@ export default function DocumentosPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroSecretaria, setFiltroSecretaria] = useState<number | "">("");
   const [filtroTipo, setFiltroTipo] = useState<number | "">("");
-  const [filtroAnio, setFiltroAnio] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState("");
   const [filtroEstatus, setFiltroEstatus] = useState("Activo");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -189,12 +186,12 @@ export default function DocumentosPage() {
     const filters: any = {};
     if (filtroSecretaria) filters.id_secre = Number(filtroSecretaria);
     if (filtroTipo) filters.tipo_doc = Number(filtroTipo);
-    if (filtroAnio) filters.anio_doc = filtroAnio;
+    if (filtroFecha) filters.fecha_doc = filtroFecha;
     if (filtroEstatus) filters.estatus_doc = filtroEstatus;
 
     fetchDocumentos(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroSecretaria, filtroTipo, filtroAnio, filtroEstatus]);
+  }, [filtroSecretaria, filtroTipo, filtroFecha, filtroEstatus]);
 
   // Animación para modal de alerta
   useEffect(() => {
@@ -377,7 +374,7 @@ export default function DocumentosPage() {
     const filters: any = {};
     if (filtroSecretaria) filters.id_secre = Number(filtroSecretaria);
     if (filtroTipo) filters.tipo_doc = Number(filtroTipo);
-    if (filtroAnio) filters.anio_doc = filtroAnio;
+    if (filtroFecha) filters.fecha_doc = filtroFecha;
     if (filtroEstatus) filters.estatus_doc = filtroEstatus;
 
     console.log('✅ Recargando documentos después de guardar...');
@@ -387,7 +384,7 @@ export default function DocumentosPage() {
   const limpiarFiltros = () => {
     setFiltroSecretaria("");
     setFiltroTipo("");
-    setFiltroAnio("");
+    setFiltroFecha("");
     setFiltroEstatus("Activo");
     setSearchQuery("");
     setCurrentPage(1);
@@ -619,17 +616,15 @@ export default function DocumentosPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Año
+                    Fecha
                   </label>
                   <input
-                    type="text"
-                    value={filtroAnio}
+                    type="date"
+                    value={filtroFecha}
                     onChange={(e) => {
-                      setFiltroAnio(e.target.value);
+                      setFiltroFecha(e.target.value);
                       setCurrentPage(1);
                     }}
-                    placeholder="Ej: 2024"
-                    maxLength={4}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 text-sm"
                   />
                 </div>
@@ -744,7 +739,7 @@ export default function DocumentosPage() {
                   {documentosPaginados.map((documento) => (
                     <div
                       key={documento.id_doc}
-                      className="group bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                      className="group flex h-full flex-col bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
                     >
                       {/* Encabezado con ícono y etiquetas */}
                       <div className="flex items-start justify-between mb-4">
@@ -795,7 +790,7 @@ export default function DocumentosPage() {
                       </div>
 
                       {/* Información del documento */}
-                      <div className="space-y-4 mb-6">
+                      <div className="flex-1 space-y-4 mb-6">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-gray-600 font-medium mb-1">Tipo</p>
@@ -820,12 +815,14 @@ export default function DocumentosPage() {
                         </div>
 
                         <div>
-                          {/* <p className="text-sm text-gray-600 font-medium mb-1">Año</p> */}
-                          {/* <p className="text-gray-900 font-semibold">{documento.anio_doc || "-"}</p> */}
+                          <p className="text-sm text-gray-600 font-medium mb-1">Dependencia</p>
+                          <p className="text-gray-900 break-words whitespace-normal leading-relaxed">
+                            {documento.nombre_dependencia || "-"}
+                          </p>
                         </div>
                       </div>
                       {/* Acciones */}
-                      <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                      <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => documento.id_doc && window.open(`/api/documentos/${documento.id_doc}/archivo`, "_blank")}
@@ -1206,10 +1203,6 @@ export default function DocumentosPage() {
                     <label className="text-sm font-medium text-gray-600">Tipo de Documento</label>
                     <p className="mt-1 text-gray-900">{detallesDocumento.nombre_tipo_documento || "-"}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Secretaría</label>
-                    <p className="mt-1 text-gray-900">{detallesDocumento.nombre_secretaria || "-"}</p>
-                  </div>
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -1225,13 +1218,24 @@ export default function DocumentosPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Hora</label>
-                    <p className="mt-1 text-gray-900">{detallesDocumento.hora_doc || "-"}</p>
+                    {/* <label className="text-sm font-medium text-gray-600">Hora</label> */}
+                    {/* <p className="mt-1 text-gray-900">{detallesDocumento.hora_doc || "-"}</p> */}
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Año</label>
-                    <p className="mt-1 text-gray-900">{detallesDocumento.anio_doc || "-"}</p>
+                    {/* <label className="text-sm font-medium text-gray-600">Año</label>
+                    <p className="mt-1 text-gray-900">{detallesDocumento.anio_doc || "-"}</p> */}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Secretaría</label>
+                  <p className="mt-1 text-gray-900">{detallesDocumento.nombre_secretaria || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Dependencia</label>
+                  <p className="mt-1 text-gray-900">{detallesDocumento.nombre_dependencia || "-"}</p>
                 </div>
               </div>
 
@@ -1264,6 +1268,21 @@ export default function DocumentosPage() {
                     <label className="text-sm font-medium text-gray-600">Versión</label>
                     <p className="mt-1 text-gray-900">{detallesDocumento.version_doc || "-"}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Número de caja</label>
+                  <p className="mt-1 text-gray-900">{detallesDocumento.num_caja || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Ubicación</label>
+                  <p className="mt-1 text-gray-900">{detallesDocumento.ubicacion_doc || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Estante</label>
+                  <p className="mt-1 text-gray-900">{detallesDocumento.estante_doc || "-"}</p>
                 </div>
               </div>
 
@@ -1339,17 +1358,18 @@ export default function DocumentosPage() {
             </div>
 
             {/* Footer */}
-            {/* <div className="flex justify-end p-6 border-t border-gray-200 bg-gray-50">
+            <div className="flex justify-end p-4 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={handleCloseDetallesModal}
                 className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
               >
                 Cerrar
               </button>
-            </div> */}
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+

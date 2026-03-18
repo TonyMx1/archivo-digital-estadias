@@ -7,6 +7,7 @@ import { DatePicker } from "react-datepicker"
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import { es } from "date-fns/locale/es";
 import "react-datepicker/dist/react-datepicker.css";
+import { ChevronDown } from 'lucide-react';
 
 // Registrar locale español
 registerLocale('es', es);
@@ -46,6 +47,10 @@ export default function DocumentosModal({
   const [searchSecretaria, setSearchSecretaria] = useState("");
   const [showSecretariaDropdown, setShowSecretariaDropdown] = useState(false);
   const [filteredSecretarias, setFilteredSecretarias] = useState(secretarias);
+  const [dependencias, setDependencias] = useState<any[]>([]);
+  const [filteredDependencias, setFilteredDependencias] = useState<any[]>([]);
+  const [searchDependencia, setSearchDependencia] = useState("");
+  const [showDependenciaDropdown, setShowDependenciaDropdown] = useState(false);
 
   // Estados del formulario
   const [nombreDoc, setNombreDoc] = useState("");
@@ -63,13 +68,17 @@ export default function DocumentosModal({
   const [consDoc, setConsDoc] = useState("");
   const [confidencialDoc, setConfidencialDoc] = useState(false);
   const [fechaDoc, setFechaDoc] = useState("");
-  const [horaDoc, setHoraDoc] = useState("");
   const [urlConsDoc, setUrlConsDoc] = useState("");
   const [estatusDoc, setEstatusDoc] = useState("Activo");
   const [versionDoc, setVersionDoc] = useState(1);
+  const [idDep, setIdDep] = useState<number | "">("");
+  const [numCaja, setNumCaja] = useState("");
+  const [ubicacionDoc, setUbicacionDoc] = useState("");
+  const [estanteDoc, setEstanteDoc] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'camera'>('file');
+  const [showConservacionDropdown, setShowConservacionDropdown] = useState(false);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,10 +153,13 @@ export default function DocumentosModal({
       setConsDoc(documento.cons_doc || "");
       setConfidencialDoc(documento.confidencial_doc || false);
       setFechaDoc(documento.fecha_doc || "");
-      setHoraDoc(documento.hora_doc || "");
       setUrlConsDoc(documento.url_cons_doc || "");
       setEstatusDoc(documento.estatus_doc || "Activo");
       setVersionDoc(documento.version_doc || 1);
+      setIdDep(documento.id_dep || "");
+      setNumCaja(documento.num_caja || "");
+      setUbicacionDoc(documento.ubicacion_doc || "");
+      setEstanteDoc(documento.estante_doc || "");
     } else {
       // Resetear formulario para nuevo documento
       setNombreDoc("");
@@ -165,10 +177,13 @@ export default function DocumentosModal({
       setConsDoc("");
       setConfidencialDoc(false);
       setFechaDoc("");
-      setHoraDoc("");
       setUrlConsDoc("");
       setEstatusDoc("Activo");
       setVersionDoc(1);
+      setIdDep("");
+      setNumCaja("");
+      setUbicacionDoc("");
+      setEstanteDoc("");
     }
   }, [isEditing, documento]);
 
@@ -209,8 +224,63 @@ export default function DocumentosModal({
   const handleSecretariaSelect = (secretaria: any) => {
     setIdSecre(secretaria.id_secretaria);
     setSearchSecretaria(secretaria.nombre_secretaria);
+    // Cerrar el dropdown después de seleccionar para comportamiento más predecible
     setShowSecretariaDropdown(false);
   };
+
+  // Manejar clic fuera del dropdown de secretaría
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const dropdown = document.getElementById('secretaria-dropdown');
+      if (dropdown && !dropdown.contains(target)) {
+        setShowSecretariaDropdown(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSecretariaDropdown(false);
+      }
+    };
+
+    if (showSecretariaDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSecretariaDropdown]);
+
+  // Manejar clic fuera del dropdown de dependencias
+  useEffect(() => {
+    const handleClickOutsideDependencia = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const dropdown = document.getElementById('dependencia-dropdown');
+      if (dropdown && !dropdown.contains(target)) {
+        setShowDependenciaDropdown(false);
+      }
+    };
+
+    const handleKeyDownDependencia = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDependenciaDropdown(false);
+      }
+    };
+
+    if (showDependenciaDropdown) {
+      document.addEventListener('mousedown', handleClickOutsideDependencia);
+      document.addEventListener('keydown', handleKeyDownDependencia);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideDependencia);
+      document.removeEventListener('keydown', handleKeyDownDependencia);
+    };
+  }, [showDependenciaDropdown]);
 
   // Inicializar búsqueda cuando se carga una secretaría existente
   useEffect(() => {
@@ -222,7 +292,73 @@ export default function DocumentosModal({
     } else if (!idSecre) {
       setSearchSecretaria("");
     }
+
+    // Limpiar búsqueda de dependencias al cambiar de secretaría
+    if (!idSecre) {
+      setSearchDependencia("");
+      setIdDep("");
+    }
   }, [idSecre, secretarias]);
+
+  // Cargar dependencias cuando se selecciona una secretaría
+  useEffect(() => {
+    const loadDependencias = async () => {
+      if (idSecre) {
+        try {
+          const response = await fetch(`/api/dependencias?secretariaId=${idSecre}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              setDependencias(data.dependencias || []);
+              setFilteredDependencias(data.dependencias || []);
+
+              // Si estamos editando y hay una dependencia seleccionada, inicializar la búsqueda
+              if (isEditing && idDep) {
+                const dependenciaSeleccionada = data.dependencias?.find((dep: any) => dep.id_dependencia === Number(idDep));
+                if (dependenciaSeleccionada) {
+                  setSearchDependencia(dependenciaSeleccionada.nombre_dependencia);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error al cargar dependencias:', error);
+        }
+      } else {
+        setDependencias([]);
+        setFilteredDependencias([]);
+        setSearchDependencia("");
+      }
+    };
+
+    loadDependencias();
+  }, [idSecre]);
+
+  // Filtrar dependencias basadas en la búsqueda
+  useEffect(() => {
+    if (searchDependencia.trim() === "") {
+      setFilteredDependencias(dependencias);
+    } else {
+      const filtered = dependencias.filter(dep =>
+        dep.nombre_dependencia.toLowerCase().includes(searchDependencia.toLowerCase())
+      );
+      setFilteredDependencias(filtered);
+    }
+  }, [searchDependencia, dependencias]);
+
+  // Manejar selección de dependencia existente
+  const handleDependenciaSelect = (dependencia: any) => {
+    setIdDep(dependencia.id_dependencia);
+    setSearchDependencia(dependencia.nombre_dependencia);
+    // Cerrar el dropdown después de seleccionar para comportamiento más predecible
+    setShowDependenciaDropdown(false);
+  };
+
+  // Manejar selección de conservación
+  const handleConservacionSelect = (conservacion: string) => {
+    setConsDoc(conservacion);
+    setShowConservacionDropdown(false);
+  };
 
   // Manejar cambios en el input de URL
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -349,10 +485,13 @@ export default function DocumentosModal({
       cons_doc: consDoc.trim() || undefined,
       confidencial_doc: confidencialDoc,
       fecha_doc: fechaDoc || undefined,
-      hora_doc: horaDoc || undefined,
       url_cons_doc: finalUrlConsDoc.trim() || undefined, // ✅ URL del archivo subido
       estatus_doc: estatusDoc,
       version_doc: versionDoc,
+      id_dep: idDep ? Number(idDep) : 0,
+      num_caja: numCaja.trim() || undefined,
+      ubicacion_doc: ubicacionDoc.trim() || undefined,
+      estante_doc: estanteDoc.trim() || undefined,
     };
 
     // PASO 4: Crear o actualizar el documento en la base de datos
@@ -472,57 +611,101 @@ export default function DocumentosModal({
               </div>
 
               {/* Secretaría */}
-              <div className="relative">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Secretaría <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchSecretaria}
-                    onChange={(e) => {
-                      setSearchSecretaria(e.target.value);
-                      setShowSecretariaDropdown(true);
-                    }}
-                    onFocus={() => setShowSecretariaDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowSecretariaDropdown(false), 200)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                    placeholder="Buscar secretaría..."
-                    required
+                <div className="relative" id="secretaria-dropdown">
+                  <button
+                    type="button"
+                    onClick={() => setShowSecretariaDropdown(!showSecretariaDropdown)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-left flex items-center justify-between hover:bg-gray-50"
                     disabled={isSubmitting}
-                  />
-                  
-                  {/* Dropdown de resultados */}
+                  >
+                    <span className="truncate">
+                      {searchSecretaria ? searchSecretaria : "Seleccionar secretaría..."}
+                    </span>
+                    <ChevronDown className="w-5 h-5 text-gray-400 transition-transform" />
+                  </button>
+
+                  {/* Dropdown de resultados - Menú completo */}
                   {showSecretariaDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredSecretarias.length > 0 ? (
-                        filteredSecretarias.map((secretaria) => (
-                          <div
-                            key={secretaria.id_secretaria}
-                            onClick={() => handleSecretariaSelect(secretaria)}
-                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                          >
-                            <div className="font-medium text-gray-900">
-                              {secretaria.nombre_secretaria}
-                            </div>
+                      <div className="py-1">
+                        {secretarias.length > 0 ? (
+                          secretarias.map((secretaria) => (
+                            <button
+                              key={secretaria.id_secretaria}
+                              type="button"
+                              onClick={() => handleSecretariaSelect(secretaria)}
+                              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                            >
+                              <div className="font-medium truncate">
+                                {secretaria.nombre_secretaria}
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center text-sm">
+                            Cargando secretarías...
                           </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          {searchSecretaria.trim() ? 
-                            "No se encontraron secretarías" : 
-                            "Escribe para buscar secretarías..."
-                          }
-                        </div>
-                      )}
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dependencia */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dependencia <span className="text-red-500">*</span>
+                </label>
+                <div className="relative" id="dependencia-dropdown">
+                  <button
+                    type="button"
+                    onClick={() => setShowDependenciaDropdown(!showDependenciaDropdown)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-left flex items-center justify-between hover:bg-gray-50"
+                    disabled={isSubmitting || !idSecre}
+                  >
+                    <span className="truncate">
+                      {searchDependencia ? searchDependencia : "Seleccionar dependencia..."}
+                    </span>
+                    <ChevronDown className="w-5 h-5 text-gray-400 transition-transform" />
+                  </button>
+
+                  {/* Dropdown de resultados - Menú completo */}
+                  {showDependenciaDropdown && idSecre && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="py-1">
+                        {dependencias.length > 0 ? (
+                          dependencias.map((dependencia: any) => (
+                            <button
+                              key={dependencia.id_dependencia}
+                              type="button"
+                              onClick={() => handleDependenciaSelect(dependencia)}
+                              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                            >
+                              <div className="font-medium truncate">
+                                {dependencia.nombre_dependencia}
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center text-sm">
+                            {idSecre ? "Selecciona una secretaría primero" : "No hay dependencias disponibles"}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Fecha del documento */}
-              <div>
+              <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  
                   Fecha de expedición del documento <span className="text-red-500">*</span>
                 </label>
                 <div className="relative w-full focus-within:text-[#0076aa]">
@@ -539,7 +722,6 @@ export default function DocumentosModal({
                       }
                     }}
                     className="w-full px-4 py-2 pl-12 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                    // NO MOVER wrapperClassName - es necesario para el estilo del datepicker
                     wrapperClassName="w-full"
                     required
                     disabled={isSubmitting}
@@ -551,73 +733,23 @@ export default function DocumentosModal({
                     yearDropdownItemNumber={100}
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors pointer-events-none">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-                      />
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </span>
                 </div>
               </div>
-            </div>
-
-            {/* Fila de Año, Hora y Estatus */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Año
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Año
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={anioDoc}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (/^[0-9]*$/.test(value)) {
-                      setAnioDoc(value);
-                    }
-                  }}
-                  maxLength={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  disabled={isSubmitting}
-                  placeholder="2024"
-                />
-              </div> */}
-
-              {/* Hora del documento */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hora del documento
-                </label>
-                <input
-                  type="time"
-                  value={horaDoc}
-                  onChange={(e) => setHoraDoc(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  disabled={isSubmitting}
-                />
-              </div>
 
               {/* Estatus */}
-              <div>
+              <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {/* ↑ mismo min-h-[2.5rem] para que ambos labels tengan igual altura */}
                   Estatus
                 </label>
                 <select
                   value={estatusDoc}
                   onChange={(e) => setEstatusDoc(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                  className="w-full h-[42px] px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                   disabled={isSubmitting}
                 >
                   <option value="Activo">Activo</option>
@@ -626,6 +758,7 @@ export default function DocumentosModal({
                 </select>
               </div>
             </div>
+            
 
             {/* Fila de Oficio y Expediente */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -687,13 +820,17 @@ export default function DocumentosModal({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Conservación
                 </label>
-                <input
-                  type="text"
+                <select
                   value={consDoc}
                   onChange={(e) => setConsDoc(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                   disabled={isSubmitting}
-                />
+                >
+                  <option value="" hidden>Seleccionar conservación</option>
+                  <option value="Tramite">Tramite</option>
+                  <option value="concentración">Concentración</option>
+                  <option value="histórico">Histórico</option>
+                </select>
               </div>
 
               <div>
@@ -720,7 +857,7 @@ export default function DocumentosModal({
                 <textarea
                   value={comentarioDoc}
                   onChange={(e) => setComentarioDoc(e.target.value)}
-                  rows={3}
+                  rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                   disabled={isSubmitting}
                 />
@@ -733,9 +870,54 @@ export default function DocumentosModal({
                 <textarea
                   value={descDoc}
                   onChange={(e) => setDescDoc(e.target.value)}
-                  rows={3}
+                  rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                   disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            {/* Campos de ubicación física */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número de caja
+                </label>
+                <input
+                  type="text"
+                  value={numCaja}
+                  onChange={(e) => setNumCaja(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                  disabled={isSubmitting}
+                  placeholder="Ej: CAJ-001"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ubicación
+                </label>
+                <input
+                  type="text"
+                  value={ubicacionDoc}
+                  onChange={(e) => setUbicacionDoc(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                  disabled={isSubmitting}
+                  placeholder="Ej: Archivo Central, Planta Baja"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estante
+                </label>
+                <input
+                  type="text"
+                  value={estanteDoc}
+                  onChange={(e) => setEstanteDoc(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                  disabled={isSubmitting}
+                  placeholder="Ej: EST-A-15"
                 />
               </div>
             </div>

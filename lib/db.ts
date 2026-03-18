@@ -1,5 +1,5 @@
 // Archivo para la conexión a PostgreSQL
-import { Pool } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 
 // Validar que las variables de entorno estén definidas
 const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
@@ -18,55 +18,90 @@ if (!useSSL && dbSSL && dbSSL !== 'false' && dbSSL !== '0') {
 }
 
 // Configuración de la base de datos
-const dbConfig = {
+function parseEnvInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const dbConfig: PoolConfig = {
   host: process.env.DB_HOST || '',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  port: parseEnvInt(process.env.DB_PORT, 5432),
   database: process.env.DB_NAME || '',
   user: process.env.DB_USER || '',
   password: process.env.DB_PASSWORD || '',
   ssl: useSSL ? { rejectUnauthorized: false } : false,
   // Límites de conexión para evitar agotar el pool
-  max: 20, // Máximo número de conexiones en el pool
-  min: 2,  // Mínimo número de conexiones mantenidas
-  idleTimeoutMillis: 30000, // Tiempo antes de cerrar conexiones inactivas (30 segundos)
-  connectionTimeoutMillis: 10000, // Tiempo máximo para establecer conexión (10 segundos)
+  max: parseEnvInt(process.env.DB_POOL_MAX, 20), // Máximo número de conexiones en el pool
+  min: parseEnvInt(process.env.DB_POOL_MIN, 0),  // Mínimo número de conexiones mantenidas
+  idleTimeoutMillis: parseEnvInt(process.env.DB_POOL_IDLE_TIMEOUT_MS, 10000), // Tiempo antes de cerrar conexiones inactivas (30 segundos)
+  connectionTimeoutMillis: parseEnvInt(process.env.DB_POOL_CONNECTION_TIMEOUT_MS, 10000),
+  maxLifetimeSeconds: parseEnvInt(process.env.DB_POOL_MAX_LIFETIME_SECONDS, 300), // Tiempo máximo para establecer conexión (10 segundos)
 };
 
 
 
-// Pool de conexiones (se inicializará cuando se proporcione la configuración)
-let pool: Pool | null = null;
-
-export function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool(dbConfig);
-    
-    // Manejar errores del pool
-    pool.on('error', (err) => {
-      console.error('Error inesperado en el pool de PostgreSQL:', err);
-    });
-    
-    // Limpiar el pool cuando el proceso termine
-    process.on('SIGINT', async () => {
-      console.log('Recibido SIGINT, cerrando pool de conexiones...');
-      await closePool();
-      process.exit(0);
-    });
-    
-    process.on('SIGTERM', async () => {
-      console.log('Recibido SIGTERM, cerrando pool de conexiones...');
-      await closePool();
-      process.exit(0);
-    });
-  }
-  return pool;
+declare global {
+  var __archivoDigitalPgPool__: Pool | null | undefined;
+  var __archivoDigitalPgSignalsBound__: boolean | undefined;
 }
 
-// Función para cerrar el pool de conexiones
+function resetPoolInstance(currentPool?: Pool | null) {
+  if (globalThis.__archivoDigitalPgPool__ === currentPool) {
+    globalThis.__archivoDigitalPgPool__ = null;
+  }
+}
+
+async function shutdownPool(signal: 'SIGINT' | 'SIGTERM') {
+  console.log(`Recibido ${signal}, cerrando pool de conexiones...`);
+  await closePool();
+  process.exit(0);
+}
+
+export function getPool(): Pool {
+  if (!globalThis.__archivoDigitalPgPool__) {
+    const nextPool = new Pool(dbConfig);
+
+    nextPool.on('error', (err) => {
+      const errorCode = 'code' in err ? err.code : undefined;
+      const isIdleTermination =
+        errorCode === '57P05' ||
+        err.message.includes('Connection terminated unexpectedly');
+
+      if (isIdleTermination) {
+        console.warn(
+          'PostgreSQL cerro una conexion inactiva del pool. Se recreara automaticamente en la siguiente consulta.'
+        );
+        void nextPool.end().catch(() => undefined);
+        resetPoolInstance(nextPool);
+        return;
+      }
+
+      console.error('Error inesperado en el pool de PostgreSQL:', err);
+    });
+
+    globalThis.__archivoDigitalPgPool__ = nextPool;
+  }
+
+  if (!globalThis.__archivoDigitalPgSignalsBound__) {
+    process.on('SIGINT', () => {
+      void shutdownPool('SIGINT');
+    });
+
+    process.on('SIGTERM', () => {
+      void shutdownPool('SIGTERM');
+    });
+
+    globalThis.__archivoDigitalPgSignalsBound__ = true;
+  }
+
+  return globalThis.__archivoDigitalPgPool__;
+}
+
 export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  const currentPool = globalThis.__archivoDigitalPgPool__;
+  if (currentPool) {
+    globalThis.__archivoDigitalPgPool__ = null;
+    await currentPool.end();
     console.log('Pool de conexiones cerrado');
   }
 }
@@ -782,11 +817,21 @@ export async function getTiposDocumento() {
 export async function getDocumentos(filters?: {
   id_secre?: number;
   tipo_doc?: number;
-  anio_doc?: string;
+  fecha_doc?: string;
   estatus_doc?: string;
 }) {
   try {
     const pool = getPool();
+    const dependencyTable = await resolveDependenciasTable(pool);
+    const dependencySelect = dependencyTable
+      ? `d.id_dep,
+        dep.${dependencyTable.nombreColumn} AS nombre_dependencia,`
+      : `d.id_dep,
+        NULL AS nombre_dependencia,`;
+    const dependencyJoin = dependencyTable
+      ? `LEFT JOIN ${dependencyTable.tableName} dep ON d.id_dep = dep.id_dependencia`
+      : '';
+
     let query = `
       SELECT 
         d.id_doc,
@@ -798,6 +843,7 @@ export async function getDocumentos(filters?: {
         d.comentario_doc,
         d.id_secre,
         s.nombre_secretaria,
+        ${dependencySelect}
         d.id_usu_alta,
         d.meta_doc,
         d.desc_doc,
@@ -812,10 +858,14 @@ export async function getDocumentos(filters?: {
         d.url_cons_doc,
         d.estatus_doc,
         d.motivo_baja_doc,
-        d.version_doc
+        d.version_doc,
+        d.num_caja,
+        d.ubicacion_doc,
+        d.estante_doc
       FROM documentos d
       LEFT JOIN tipo_documento td ON d.tipo_doc = td.id_documento
       LEFT JOIN secretarias s ON d.id_secre = s.id_secretaria
+      ${dependencyJoin}
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -833,9 +883,9 @@ export async function getDocumentos(filters?: {
       paramIndex++;
     }
 
-    if (filters?.anio_doc) {
-      query += ` AND d.anio_doc = $${paramIndex}`;
-      params.push(filters.anio_doc);
+    if (filters?.fecha_doc) {
+      query += ` AND d.fecha_doc = $${paramIndex}`;
+      params.push(filters.fecha_doc);
       paramIndex++;
     }
 
@@ -859,6 +909,16 @@ export async function getDocumentos(filters?: {
 export async function getDocumentoById(idDoc: number) {
   try {
     const pool = getPool();
+    const dependencyTable = await resolveDependenciasTable(pool);
+    const dependencySelect = dependencyTable
+      ? `d.id_dep,
+        dep.${dependencyTable.nombreColumn} AS nombre_dependencia,`
+      : `d.id_dep,
+        NULL AS nombre_dependencia,`;
+    const dependencyJoin = dependencyTable
+      ? `LEFT JOIN ${dependencyTable.tableName} dep ON d.id_dep = dep.id_dependencia`
+      : '';
+
     const result = await pool.query(
       `SELECT 
         d.id_doc,
@@ -870,6 +930,7 @@ export async function getDocumentoById(idDoc: number) {
         d.comentario_doc,
         d.id_secre,
         s.nombre_secretaria,
+        ${dependencySelect}
         d.id_usu_alta,
         d.meta_doc,
         d.desc_doc,
@@ -884,10 +945,14 @@ export async function getDocumentoById(idDoc: number) {
         d.url_cons_doc,
         d.estatus_doc,
         d.motivo_baja_doc,
-        d.version_doc
+        d.version_doc,
+        d.num_caja,
+        d.ubicacion_doc,
+        d.estante_doc
        FROM documentos d
        LEFT JOIN tipo_documento td ON d.tipo_doc = td.id_documento
        LEFT JOIN secretarias s ON d.id_secre = s.id_secretaria
+       ${dependencyJoin}
        WHERE d.id_doc = $1`,
       [idDoc]
     );
@@ -920,6 +985,10 @@ export async function createDocumento(documentoData: {
   url_cons_doc?: string;
   estatus_doc?: string;
   version_doc?: number;
+  id_dep?: number;
+  num_caja?: string;
+  ubicacion_doc?: string;
+  estante_doc?: string;
 }) {
   try {
     const pool = getPool();
@@ -933,9 +1002,10 @@ export async function createDocumento(documentoData: {
         nombre_doc, tipo_doc, id_secre, size_doc, anio_doc, comentario_doc,
         id_usu_alta, meta_doc, desc_doc, oficio_doc, expediente_doc,
         serie_doc, subserie_doc, cons_doc, confidencial_doc, fecha_doc,
-        hora_doc, url_cons_doc, estatus_doc, version_doc
+        hora_doc, url_cons_doc, estatus_doc, version_doc, id_dep,
+        num_caja, ubicacion_doc, estante_doc
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
       ) RETURNING *`,
       [
         documentoData.nombre_doc,
@@ -958,6 +1028,10 @@ export async function createDocumento(documentoData: {
         documentoData.url_cons_doc || null,
         documentoData.estatus_doc || 'Activo',
         documentoData.version_doc || 1,
+        documentoData.id_dep || 0,
+        documentoData.num_caja || null,
+        documentoData.ubicacion_doc || null,
+        documentoData.estante_doc || null,
       ]
     );
     return result.rows[0];
@@ -989,6 +1063,10 @@ export async function updateDocumento(documentoData: {
   url_cons_doc?: string;
   estatus_doc?: string;
   version_doc?: number;
+  id_dep?: number;
+  num_caja?: string;
+  ubicacion_doc?: string;
+  estante_doc?: string;
 }) {
   try {
     const pool = getPool();
@@ -1005,7 +1083,8 @@ export async function updateDocumento(documentoData: {
       'nombre_doc', 'tipo_doc', 'id_secre', 'size_doc', 'anio_doc',
       'comentario_doc', 'meta_doc', 'desc_doc', 'oficio_doc', 'expediente_doc',
       'serie_doc', 'subserie_doc', 'cons_doc', 'confidencial_doc', 'fecha_doc',
-      'hora_doc', 'url_cons_doc', 'estatus_doc', 'version_doc'
+      'hora_doc', 'url_cons_doc', 'estatus_doc', 'version_doc', 'id_dep',
+      'num_caja', 'ubicacion_doc', 'estante_doc'
     ];
 
     for (const campo of camposPermitidos) {
@@ -1077,3 +1156,5 @@ export async function getStatistics() {
     throw error;
   }
 }
+
+

@@ -117,6 +117,22 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       ),
     },
     {
+      href: '/prestamo',
+      label: 'Documentos en Préstamo',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 32 32">
+          <polygon points="17,1 6,6.6 6,9 28,9 28,6.6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <path d="M3,25l2.6-4.2c1.5-2.3,4-3.8,6.8-3.8H19v0c0,2.2-1.8,4-4,4h-2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <path d="M15,21h8l1.2-1.6c1.1-1.5,2.9-2.4,4.8-2.4h0l-2.7,4.8c-1.4,2.6-4.2,4.2-7.1,4.2h0c-4.7,0-9.3,1.4-13.2,4l0,0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <line x1="17" y1="9" x2="17" y2="17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <line x1="21" y1="9" x2="21" y2="21" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <line x1="25" y1="9" x2="25" y2="18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <line x1="9" y1="9" x2="9" y2="17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+          <line x1="13" y1="9" x2="13" y2="17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
+        </svg>
+      ),
+    },
+    {
       href: '/secretarias',
       label: 'Secretarías',
       icon: (
@@ -128,7 +144,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
   ];
 
   if (roleId === 1 || roleId === 2) {
-    menuItems.splice(2, 0, {
+    menuItems.splice(5, 0, {
       href: '/admin',
       label: 'Administración',
       icon: (

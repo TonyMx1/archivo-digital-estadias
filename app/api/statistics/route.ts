@@ -20,6 +20,15 @@ export async function GET() {
       `SELECT COUNT(*) as total FROM documentos`
     );
     
+    // Contar documentos por secretaría
+    const documentosPorSecretariaQuery = await pool.query(
+      `SELECT s.id_secretaria, s.nombre_secretaria, COUNT(d.id_doc) as total_documentos
+       FROM secretarias s
+       LEFT JOIN documentos d ON s.id_secretaria = d.id_secre
+       GROUP BY s.id_secretaria, s.nombre_secretaria
+       ORDER BY total_documentos DESC`
+    );
+    
     // También puedes contar dependencias activas si tienes ese campo
     let dependenciasActivas = null;
     try {
@@ -37,7 +46,8 @@ export async function GET() {
         secretarias: parseInt(secretariasQuery.rows[0].total),
         dependencias: parseInt(dependenciasQuery.rows[0].total),
         dependenciasActivas: dependenciasActivas,
-        documentos: parseInt(documentosQuery.rows[0].total)
+        documentos: parseInt(documentosQuery.rows[0].total),
+        documentosPorSecretaria: documentosPorSecretariaQuery.rows
       }
     });
     

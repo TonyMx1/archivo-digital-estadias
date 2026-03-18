@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const idDoc = searchParams.get('id_doc');
     const idSecre = searchParams.get('id_secre');
     const tipoDoc = searchParams.get('tipo_doc');
-    const anioDoc = searchParams.get('anio_doc');
+    const fechaDoc = searchParams.get('fecha_doc');
     const estatusDoc = searchParams.get('estatus_doc');
 
     // Si se especifica id_doc, obtener un documento específico
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const filters: {
       id_secre?: number;
       tipo_doc?: number;
-      anio_doc?: string;
+      fecha_doc?: string;
       estatus_doc?: string;
     } = {};
 
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
     if (tipoDoc) {
       filters.tipo_doc = parseInt(tipoDoc);
     }
-    if (anioDoc) {
-      filters.anio_doc = anioDoc;
+    if (fechaDoc) {
+      filters.fecha_doc = fechaDoc;
     }
     if (estatusDoc) {
       filters.estatus_doc = estatusDoc;
@@ -149,6 +149,10 @@ export async function POST(request: NextRequest) {
       url_cons_doc,
       estatus_doc,
       version_doc,
+      id_dep,
+      num_caja,
+      ubicacion_doc,
+      estante_doc,
     } = body;
 
     if (!nombre_doc || !tipo_doc || !id_secre) {
@@ -179,6 +183,10 @@ export async function POST(request: NextRequest) {
       url_cons_doc,
       estatus_doc,
       version_doc,
+      id_dep,
+      num_caja,
+      ubicacion_doc,
+      estante_doc,
     });
 
     return NextResponse.json({

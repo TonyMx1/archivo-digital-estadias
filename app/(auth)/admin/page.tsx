@@ -642,10 +642,10 @@ export default function AdminPage() {
                         <input
                           type="text"
                           value={newUserIdGeneral}
-                          onChange={(e) => setNewUserIdGeneral(e.target.value)}
-                          
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 placeholder:!text-gray-500 placeholder:!opacity-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                          disabled={isCreatingUser}
+                          readOnly
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg 
+               bg-gray-100 text-gray-500 cursor-not-allowed 
+               focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                         />
                       </div>
                       <div>
@@ -653,9 +653,11 @@ export default function AdminPage() {
                         <input
                           type="text"
                           value={newUserNombre}
+                          readOnly
                           onChange={(e) => setNewUserNombre(e.target.value)}
-                          
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 placeholder:!text-gray-500 placeholder:!opacity-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg 
+               bg-gray-100 text-gray-500 cursor-not-allowed 
+               focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
                           disabled={isCreatingUser}
                         />
                       </div>
