@@ -1,5 +1,4 @@
 import { User, Role } from '@/hooks/useAdminUsers';
-import Image from 'next/image';
 
 interface UsersTableProps {
   users: User[];
@@ -31,9 +30,9 @@ export default function UsersTable({
       <table className="w-full text-sm text-left rtl:text-right text-body">
         <thead className="text-sm bg-[#0b3b60] text-white border-b rounded-base border-default">
           <tr>
-            <th scope="col" className="px-6 py-3 font-medium">ID</th>
             <th scope="col" className="px-6 py-3 font-medium">Usuario</th>
             <th scope="col" className="px-6 py-3 font-medium">CURP</th>
+            <th scope="col" className="px-6 py-3 font-medium">Secretaría</th>
             <th scope="col" className="px-6 py-3 font-medium">ID General</th>
             <th scope="col" className="px-6 py-3 font-medium">Rol Actual</th>
             <th scope="col" className="px-6 py-3 font-medium">Cambiar Rol / Eliminar</th>
@@ -52,11 +51,9 @@ export default function UsersTable({
                 key={user.id_usuarios}
                 className="bg-[#f4f7fb] border-b border-default hover:bg-[#e9f0f8] transition-colors"
               >
-                <th scope="row" className="px-6 py-4 font-medium text-heading whitespace-nowrap">
-                  {user.id_usuarios}
-                </th>
                 <td className="px-6 py-4">{user.nombre_usuario || '-'}</td>
                 <td className="px-6 py-4">{user.curp}</td>
+                <td className="px-6 py-4">{user.nom_secre || '-'}</td>
                 <td className="px-6 py-4">{user.id_general}</td>
                 <td className="px-6 py-4">
                   <span className="px-2 py-1 bg-[#0076aa] text-white rounded text-xs font-semibold">

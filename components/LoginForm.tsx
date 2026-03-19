@@ -113,7 +113,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-3 max-w-sm mx-auto flex-1">
+                <form onSubmit={handleSubmit} className="space-y-3 mx-auto flex-1 w-sm max-w-md">
                   <div className=" rounded-xl p-3 border border-gray-200">
                     <label
                       htmlFor="curp"
@@ -322,6 +322,8 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                 <div className="text-center space-y-1 pt-3 border-t border-gray-200 bg-gray-50 rounded-lg px-3 py-2 mt-auto">
                   <a
                     href="https://cus.sanjuandelrio.gob.mx/tramites-sjr/public/forgot-password.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-sm text-[#0076aa] hover:text-[#00b2e2] transition-colors font-medium"
                   >
                     ¿Olvidaste tu contraseña?

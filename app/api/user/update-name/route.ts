@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { updateUserName } from '@/lib/db';
+import { updateUserProfile } from '@/lib/db';
 
 const INFO_API_URL = `${process.env.INFO_API_URL}`;
 
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     // Realizar la petición GET
     // Nota: El servidor PHP puede tener problemas con Content-Length en GET
     // Probamos sin Content-Length primero, ya que Node.js lo maneja automáticamente
-    const headersForRequest = { ...headers };
-    delete (headersForRequest as any)['Content-Length']; // Eliminar Content-Length para GET
+    const headersForRequest = new Headers(headers);
+    headersForRequest.delete('Content-Length');
     
     const response = await fetch(INFO_API_URL, {
       method: 'POST',
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
           await response.text();
           errorMessage = `Error ${response.status}. La API devolvió un formato inesperado.`;
         }
-      } catch (e) {
+      } catch {
         // Error al leer respuesta
       }
       return NextResponse.json(
@@ -140,24 +140,31 @@ export async function POST(request: NextRequest) {
     
     // Extraer nombre_completo de data.nombre_completo
     const nombreCompleto = responseData?.data?.nombre_completo;
+    const nomSecre = responseData?.data?.departamento
+      ? String(responseData.data.departamento).trim()
+      : undefined;
 
-    if (!nombreCompleto) {
+    if (!nombreCompleto && !nomSecre) {
       return NextResponse.json(
-        { error: 'No se pudo obtener el nombre completo del usuario' },
+        { error: 'No se pudo obtener información del usuario desde CUS' },
         { status: 400 }
       );
     }
 
-    // Actualizar el nombre en la base de datos
-    await updateUserName(payload.id_usuarios, nombreCompleto);
+    // Actualizar datos sincronizados desde CUS
+    await updateUserProfile(payload.id_usuarios, {
+      nombre_usuario: nombreCompleto,
+      nom_secre: nomSecre,
+    });
 
     return NextResponse.json({
       success: true,
       nombre_completo: nombreCompleto,
-      message: 'Nombre actualizado exitosamente',
+      nom_secre: nomSecre,
+      message: 'Datos del usuario actualizados exitosamente',
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al actualizar nombre del usuario:', error);
     return NextResponse.json(
       { error: 'Error al actualizar el nombre del usuario' },

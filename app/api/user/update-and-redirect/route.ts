@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
-import { updateUserName, getUserById } from '@/lib/db';
+import { updateUserProfile, getUserById } from '@/lib/db';
 
 const INFO_API_URL = `${process.env.INFO_API_URL}`;
 
@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { cusToken } = body;
 
-    let userRole = payload.id_rol;
+    const userRole = payload.id_rol;
     let nombreCompleto = null;
+    let nomSecre: string | undefined;
 
     // Si hay cusToken, intentar actualizar el nombre
     if (cusToken) {
@@ -70,10 +71,15 @@ export async function POST(request: NextRequest) {
           if (isActuallyJson) {
             const responseData = JSON.parse(textResponse);
             nombreCompleto = responseData?.data?.nombre_completo;
+            nomSecre = responseData?.data?.departamento
+              ? String(responseData.data.departamento).trim()
+              : undefined;
 
-            if (nombreCompleto) {
-              // Actualizar el nombre en la base de datos
-              await updateUserName(payload.id_usuarios, nombreCompleto);
+            if (nombreCompleto || nomSecre) {
+              await updateUserProfile(payload.id_usuarios, {
+                nombre_usuario: nombreCompleto,
+                nom_secre: nomSecre,
+              });
             }
           }
         }
@@ -94,10 +100,11 @@ export async function POST(request: NextRequest) {
         id_usuarios: payload.id_usuarios,
         id_rol: userRole,
         nombre_usuario: user?.nombre_usuario || null,
+        nom_secre: user?.nom_secre || null,
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en el proceso combinado:', error);
     return NextResponse.json(
       { error: 'Error en el proceso de autenticación' },

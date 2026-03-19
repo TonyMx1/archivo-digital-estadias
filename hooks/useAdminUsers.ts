@@ -8,6 +8,7 @@ export interface User {
   id_rol: number;
   nombre_rol: string;
   nombre_usuario: string | null;
+  nom_secre: string | null;
 }
 
 export interface Role {

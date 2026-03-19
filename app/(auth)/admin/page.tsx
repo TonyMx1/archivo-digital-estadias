@@ -679,12 +679,12 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* {lookupRawData && (
+                    {lookupRawData && (
                       <details className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                         <summary className="cursor-pointer text-sm font-semibold text-gray-700">Ver respuesta del CUS</summary>
                         <pre className="mt-2 text-xs text-gray-700 overflow-auto max-h-60">{JSON.stringify(lookupRawData, null, 2)}</pre>
                       </details>
-                    )} */}
+                    )}
 
                     <div className="flex gap-3 justify-end pt-2">
                       {/* <button

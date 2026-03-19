@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         id_rol: payload.id_rol,
         id_general: payload.id_general,
         nombre_usuario: user?.nombre_usuario || null,
+        nom_secre: user?.nom_secre || null,
         nombre_rol: role?.rol || null,
         permisos,
       },

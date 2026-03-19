@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         u.id_general,
         u.id_rol,
         u.nombre_usuario,
+        u.nom_secre,
         r.rol as nombre_rol
       FROM usuarios u
       LEFT JOIN roles r ON u.id_rol = r.id_roles

@@ -156,7 +156,7 @@ export async function getUserByCurp(curp: string) {
   
   try {
     const result = await client.query(
-      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario 
+      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre 
        FROM usuarios 
        WHERE curp = $1`,
       [curp.toUpperCase()]
@@ -182,7 +182,7 @@ export async function getUserById(idUsuarios: number) {
   
   try {
     const result = await client.query(
-      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario 
+      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre 
        FROM usuarios 
        WHERE id_usuarios = $1`,
       [idUsuarios]
@@ -207,6 +207,7 @@ export async function createUserIfNotExists(userData: {
   id_general: string;
   id_rol?: number;
   nombre_usuario?: string;
+  nom_secre?: string | null;
 }) {
   try {
     const pool = getPool();
@@ -218,7 +219,7 @@ export async function createUserIfNotExists(userData: {
     if (existingUser) {
       // Si existe, actualizar id_general y nombre_usuario si es diferente
       const updates: string[] = [];
-      const values: any[] = [];
+      const values: unknown[] = [];
       let paramIndex = 1;
       
       if (existingUser.id_general !== userData.id_general) {
@@ -232,6 +233,15 @@ export async function createUserIfNotExists(userData: {
         values.push(userData.nombre_usuario);
         paramIndex++;
       }
+
+      if (
+        userData.nom_secre !== undefined &&
+        existingUser.nom_secre !== userData.nom_secre
+      ) {
+        updates.push(`nom_secre = $${paramIndex}`);
+        values.push(userData.nom_secre);
+        paramIndex++;
+      }
       
       if (updates.length > 0) {
         values.push(curpUpper);
@@ -242,7 +252,8 @@ export async function createUserIfNotExists(userData: {
         return { 
           ...existingUser, 
           id_general: userData.id_general, 
-          nombre_usuario: userData.nombre_usuario || existingUser.nombre_usuario 
+          nombre_usuario: userData.nombre_usuario || existingUser.nombre_usuario,
+          nom_secre: userData.nom_secre !== undefined ? userData.nom_secre : existingUser.nom_secre,
         };
       }
       return existingUser;
@@ -250,10 +261,16 @@ export async function createUserIfNotExists(userData: {
     
     // Si no existe, crear nuevo usuario
     const result = await pool.query(
-      `INSERT INTO usuarios (curp, id_general, id_rol, nombre_usuario)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id_usuarios, id_general, curp, id_rol, nombre_usuario`,
-      [curpUpper, userData.id_general, idRol, userData.nombre_usuario || null]
+      `INSERT INTO usuarios (curp, id_general, id_rol, nombre_usuario, nom_secre)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre`,
+      [
+        curpUpper,
+        userData.id_general,
+        idRol,
+        userData.nombre_usuario || null,
+        userData.nom_secre || null,
+      ]
     );
     
     if (result.rows.length === 0) {
@@ -275,15 +292,49 @@ export async function createUserIfNotExists(userData: {
 
 // Función para actualizar el nombre del usuario
 export async function updateUserName(idUsuarios: number, nombre_usuario: string) {
+  return updateUserProfile(idUsuarios, { nombre_usuario });
+}
+
+// Función para actualizar datos sincronizados del usuario desde CUS
+export async function updateUserProfile(
+  idUsuarios: number,
+  profileData: {
+    nombre_usuario?: string | null;
+    nom_secre?: string | null;
+  }
+) {
   try {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (profileData.nombre_usuario !== undefined) {
+      updates.push(`nombre_usuario = $${paramIndex}`);
+      values.push(profileData.nombre_usuario);
+      paramIndex++;
+    }
+
+    if (profileData.nom_secre !== undefined) {
+      updates.push(`nom_secre = $${paramIndex}`);
+      values.push(profileData.nom_secre);
+      paramIndex++;
+    }
+
+    if (updates.length === 0) {
+      return false;
+    }
+
+    values.push(idUsuarios);
     const pool = getPool();
     await pool.query(
-      `UPDATE usuarios SET nombre_usuario = $1 WHERE id_usuarios = $2`,
-      [nombre_usuario, idUsuarios]
+      `UPDATE usuarios
+       SET ${updates.join(', ')}
+       WHERE id_usuarios = $${paramIndex}`,
+      values
     );
     return true;
   } catch (error) {
-    console.error('Error al actualizar nombre del usuario:', error);
+    console.error('Error al actualizar perfil del usuario:', error);
     throw error;
   }
 }
