@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromCookies, verifyToken } from "@/lib/auth";
 import { getDocumentoById, hasPermission } from "@/lib/db";
+import {
+  canAccessDocumentSecretaria,
+  DocumentScopeError,
+  getDocumentScopeForUser,
+} from "@/lib/document-access";
 import { PERMISOS } from "@/lib/permisos";
 
 function isAllowedUpstreamUrl(url: string): boolean {
@@ -59,6 +64,22 @@ export async function GET(
       return NextResponse.json({ error: "Documento no encontrado" }, { status: 404 });
     }
 
+    const scope = await getDocumentScopeForUser(payload.id_usuarios, payload.id_rol);
+
+    if (
+      scope.restricted &&
+      !canAccessDocumentSecretaria(
+        payload.id_rol,
+        documento.id_secre,
+        scope.allowedSecretariaId
+      )
+    ) {
+      return NextResponse.json(
+        { error: "No puedes acceder a documentos de otra secretaría" },
+        { status: 403 }
+      );
+    }
+
     const fileUrl = documento.url_cons_doc;
 
     if (!fileUrl) {
@@ -101,6 +122,13 @@ export async function GET(
 
     return new NextResponse(upstreamRes.body, { status: 200, headers });
   } catch (error: any) {
+    if (error instanceof DocumentScopeError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Error al servir archivo de documento:", error);
     return NextResponse.json(
       { error: error?.message || "Error al servir archivo" },

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
-import { useSecretarias } from "@/hooks/useSecretarias";
+import type { Secretaria } from "@/hooks/useSecretarias";
 import { DatePicker } from "react-datepicker"
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import { es } from "date-fns/locale/es";
@@ -27,6 +27,9 @@ interface DocumentosModalProps {
   documento?: Documento | null;
   isEditing?: boolean;
   isReadOnly?: boolean;
+  secretarias: Secretaria[];
+  currentUserRole: number | null;
+  currentUserSecretaria: string | null;
 }
 
 export default function DocumentosModal({
@@ -37,9 +40,11 @@ export default function DocumentosModal({
   documento,
   isEditing = false,
   isReadOnly = false,
+  secretarias,
+  currentUserRole,
+  currentUserSecretaria,
 }: DocumentosModalProps) {
   const { crearDocumento, actualizarDocumento, subirArchivo } = useDocumentos();
-  const { secretarias } = useSecretarias();
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [loadingTipos, setLoadingTipos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +84,44 @@ export default function DocumentosModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'camera'>('file');
   const [showConservacionDropdown, setShowConservacionDropdown] = useState(false);
+
+  const normalizeSecretariaName = (value: string | null | undefined) => {
+    if (!value) return "";
+
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
+  };
+
+  const hasGlobalDocumentAccess = currentUserRole === 1 || currentUserRole === 2;
+
+  const secretariaAsignada = useMemo(() => {
+    if (!currentUserSecretaria) return null;
+
+    const normalizedName = normalizeSecretariaName(currentUserSecretaria);
+    return (
+      secretarias.find((secretaria) =>
+        [secretaria.nombre_secretaria, secretaria.sec_nomcl]
+          .filter((candidate): candidate is string => Boolean(candidate))
+          .some(
+            (candidate) => normalizeSecretariaName(candidate) === normalizedName
+          )
+      ) || null
+    );
+  }, [currentUserSecretaria, secretarias]);
+
+  const availableSecretarias = useMemo(() => {
+    if (hasGlobalDocumentAccess) {
+      return secretarias;
+    }
+
+    return secretariaAsignada ? [secretariaAsignada] : [];
+  }, [hasGlobalDocumentAccess, secretariaAsignada, secretarias]);
+
+  const isSecretariaLocked = !hasGlobalDocumentAccess && Boolean(secretariaAsignada);
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +171,11 @@ export default function DocumentosModal({
       }
     };
 
-    if (isOpen && tiposDocumento.length === 0) {
+    if (!isOpen) {
+      return;
+    }
+
+    if (tiposDocumento.length === 0) {
       loadTiposDocumento();
     }
   }, [isOpen, tiposDocumento.length]);
@@ -202,23 +249,16 @@ export default function DocumentosModal({
     )), [tiposDocumento]);
 
   const secretariasOptions = useMemo(() =>
-    secretarias.map((sec) => (
+    availableSecretarias.map((sec) => (
       <option key={sec.id_secretaria} value={sec.id_secretaria}>
         {sec.nombre_secretaria}
       </option>
-    )), [secretarias]);
+    )), [availableSecretarias]);
 
   // Filtrar secretarías basadas en la búsqueda
   useEffect(() => {
-    if (searchSecretaria.trim() === "") {
-      setFilteredSecretarias(secretarias);
-    } else {
-      const filtered = secretarias.filter(sec =>
-        sec.nombre_secretaria.toLowerCase().includes(searchSecretaria.toLowerCase())
-      );
-      setFilteredSecretarias(filtered);
-    }
-  }, [searchSecretaria, secretarias]);
+    setFilteredSecretarias(availableSecretarias);
+  }, [availableSecretarias]);
 
   // Manejar selección de secretaría existente
   const handleSecretariaSelect = (secretaria: any) => {
@@ -284,8 +324,8 @@ export default function DocumentosModal({
 
   // Inicializar búsqueda cuando se carga una secretaría existente
   useEffect(() => {
-    if (idSecre && secretarias.length > 0) {
-      const secretaria = secretarias.find(sec => sec.id_secretaria === idSecre);
+    if (idSecre && availableSecretarias.length > 0) {
+      const secretaria = availableSecretarias.find(sec => sec.id_secretaria === idSecre);
       if (secretaria) {
         setSearchSecretaria(secretaria.nombre_secretaria);
       }
@@ -298,7 +338,16 @@ export default function DocumentosModal({
       setSearchDependencia("");
       setIdDep("");
     }
-  }, [idSecre, secretarias]);
+  }, [idSecre, availableSecretarias]);
+
+  useEffect(() => {
+    if (!isOpen || isEditing || hasGlobalDocumentAccess || !secretariaAsignada) {
+      return;
+    }
+
+    setIdSecre(secretariaAsignada.id_secretaria);
+    setSearchSecretaria(secretariaAsignada.nombre_secretaria);
+  }, [hasGlobalDocumentAccess, isEditing, isOpen, secretariaAsignada]);
 
   // Cargar dependencias cuando se selecciona una secretaría
   useEffect(() => {
@@ -618,29 +667,36 @@ export default function DocumentosModal({
                 <div className="relative" id="secretaria-dropdown">
                   <button
                     type="button"
-                    onClick={() => setShowSecretariaDropdown(!showSecretariaDropdown)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-left flex items-center justify-between hover:bg-gray-50"
-                    disabled={isSubmitting}
+                    onClick={() => {
+                      if (!isSecretariaLocked) {
+                        setFilteredSecretarias(availableSecretarias);
+                        setShowSecretariaDropdown(!showSecretariaDropdown);
+                      }
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-left flex items-start justify-between gap-3 hover:bg-gray-50"
+                    disabled={isSubmitting || isSecretariaLocked}
+                    title={searchSecretaria || "Seleccionar secretaría"}
                   >
-                    <span className="truncate">
+                    <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
                       {searchSecretaria ? searchSecretaria : "Seleccionar secretaría..."}
                     </span>
-                    <ChevronDown className="w-5 h-5 text-gray-400 transition-transform" />
+                    <ChevronDown className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-400 transition-transform" />
                   </button>
 
                   {/* Dropdown de resultados - Menú completo */}
                   {showSecretariaDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       <div className="py-1">
-                        {secretarias.length > 0 ? (
-                          secretarias.map((secretaria) => (
+                        {filteredSecretarias.length > 0 ? (
+                          filteredSecretarias.map((secretaria) => (
                             <button
                               key={secretaria.id_secretaria}
                               type="button"
                               onClick={() => handleSecretariaSelect(secretaria)}
-                              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              title={secretaria.nombre_secretaria}
                             >
-                              <div className="font-medium truncate">
+                              <div className="font-medium whitespace-normal break-words leading-snug">
                                 {secretaria.nombre_secretaria}
                               </div>
                             </button>
@@ -654,6 +710,11 @@ export default function DocumentosModal({
                     </div>
                   )}
                 </div>
+                {isSecretariaLocked && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    La secretaría está fija según la asignación de tu usuario.
+                  </p>
+                )}
               </div>
 
               {/* Dependencia */}

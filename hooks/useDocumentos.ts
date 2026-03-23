@@ -38,37 +38,79 @@ interface DocumentosFilters {
   estatus_doc?: string;
 }
 
+const documentosCache = new Map<string, Documento[]>();
+const pendingDocumentosRequests = new Map<string, Promise<Documento[]>>();
+
+function buildDocumentosCacheKey(filters?: DocumentosFilters) {
+  return JSON.stringify({
+    id_secre: filters?.id_secre ?? null,
+    tipo_doc: filters?.tipo_doc ?? null,
+    fecha_doc: filters?.fecha_doc ?? null,
+    estatus_doc: filters?.estatus_doc ?? null,
+  });
+}
+
+function clearDocumentosCache() {
+  documentosCache.clear();
+  pendingDocumentosRequests.clear();
+}
+
 export function useDocumentos() {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDocumentos = async (filters?: DocumentosFilters) => {
+    const cacheKey = buildDocumentosCacheKey(filters);
+    const cachedDocumentos = documentosCache.get(cacheKey);
+
+    if (cachedDocumentos) {
+      setDocumentos(cachedDocumentos);
+      setLoading(false);
+      setError(null);
+      return cachedDocumentos;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (filters?.id_secre) params.append('id_secre', filters.id_secre.toString());
-      if (filters?.tipo_doc) params.append('tipo_doc', filters.tipo_doc.toString());
-      if (filters?.fecha_doc) params.append('fecha_doc', filters.fecha_doc);
-      if (filters?.estatus_doc) params.append('estatus_doc', filters.estatus_doc);
+      if (!pendingDocumentosRequests.has(cacheKey)) {
+        const request = (async () => {
+          const params = new URLSearchParams();
+          if (filters?.id_secre) params.append('id_secre', filters.id_secre.toString());
+          if (filters?.tipo_doc) params.append('tipo_doc', filters.tipo_doc.toString());
+          if (filters?.fecha_doc) params.append('fecha_doc', filters.fecha_doc);
+          if (filters?.estatus_doc) params.append('estatus_doc', filters.estatus_doc);
 
-      const url = `/api/documentos${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url);
+          const url = `/api/documentos${params.toString() ? `?${params.toString()}` : ''}`;
+          const response = await fetch(url);
 
-      if (!response.ok) {
-        throw new Error('Error al cargar documentos');
+          if (!response.ok) {
+            throw new Error('Error al cargar documentos');
+          }
+
+          const data = await response.json();
+          if (!data.success) {
+            throw new Error(data.error || 'Error al cargar documentos');
+          }
+
+          const documentosResult = data.documentos || [];
+          documentosCache.set(cacheKey, documentosResult);
+          return documentosResult;
+        })().finally(() => {
+          pendingDocumentosRequests.delete(cacheKey);
+        });
+
+        pendingDocumentosRequests.set(cacheKey, request);
       }
 
-      const data = await response.json();
-      if (data.success) {
-        setDocumentos(data.documentos || []);
-      } else {
-        throw new Error(data.error || 'Error al cargar documentos');
-      }
+      const documentosResult = await pendingDocumentosRequests.get(cacheKey)!;
+      setDocumentos(documentosResult);
+      return documentosResult;
     } catch (err: any) {
       setError(err.message || 'Error al cargar documentos');
       console.error('Error al cargar documentos:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -95,6 +137,7 @@ export function useDocumentos() {
 
       const data = await response.json();
       if (data.success) {
+        clearDocumentosCache();
         await fetchDocumentos(); // Recargar la lista
         return { success: true, documento: data.documento };
       } else {
@@ -128,6 +171,7 @@ export function useDocumentos() {
 
       const data = await response.json();
       if (data.success) {
+        clearDocumentosCache();
         await fetchDocumentos(); // Recargar la lista
         return { success: true, documento: data.documento };
       } else {
@@ -161,6 +205,7 @@ export function useDocumentos() {
 
       const data = await response.json();
       if (data.success) {
+        clearDocumentosCache();
         await fetchDocumentos(); // Recargar la lista
         return { success: true };
       } else {

@@ -16,10 +16,17 @@ export interface Role {
   rol: string;
 }
 
+export interface SecretariaOption {
+  id_secretaria: number;
+  nombre_secretaria: string;
+  sec_nomcl?: string | null;
+}
+
 export function useAdminUsers() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [secretarias, setSecretarias] = useState<SecretariaOption[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +34,6 @@ export function useAdminUsers() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Obtener rol del usuario actual
         const userResponse = await fetch('/api/user');
         if (!userResponse.ok) {
           router.push('/');
@@ -43,13 +49,11 @@ export function useAdminUsers() {
         const role = userData.user.id_rol;
         setCurrentUserRole(role);
 
-        // Solo administrador (1) y superusuario (2) pueden ver esta página
         if (role !== 1 && role !== 2) {
           router.push('/');
           return;
         }
 
-        // Cargar usuarios y roles
         const adminResponse = await fetch('/api/admin/users');
         if (!adminResponse.ok) {
           setError('No tienes permisos para acceder a esta página');
@@ -61,6 +65,7 @@ export function useAdminUsers() {
         if (adminData.success) {
           setUsers(adminData.users);
           setRoles(adminData.roles);
+          setSecretarias(adminData.secretarias || []);
         } else {
           setError('Error al cargar los datos');
         }
@@ -76,7 +81,6 @@ export function useAdminUsers() {
   }, [router]);
 
   const updateUserRole = async (userId: number, newRoleId: number) => {
-    // Solo el administrador puede modificar roles
     if (currentUserRole !== 1) {
       throw new Error('Solo los administradores pueden modificar roles');
     }
@@ -95,25 +99,59 @@ export function useAdminUsers() {
     const data = await response.json();
 
     if (data.success) {
-      // Actualizar el usuario en la lista local
-      setUsers(users.map(user => 
-        user.id_usuarios === userId 
-          ? { ...user, id_rol: newRoleId, nombre_rol: roles.find(r => r.id_roles === newRoleId)?.rol || '' }
-          : user
-      ));
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id_usuarios === userId
+            ? { ...user, id_rol: newRoleId, nombre_rol: roles.find((r) => r.id_roles === newRoleId)?.rol || '' }
+            : user
+        )
+      );
       return { success: true };
-    } else {
-      throw new Error(data.error || 'Error al actualizar el rol');
     }
+
+    throw new Error(data.error || 'Error al actualizar el rol');
+  };
+
+  const updateUserSecretaria = async (userId: number, nomSecre: string | null) => {
+    if (currentUserRole !== 1 && currentUserRole !== 2) {
+      throw new Error('Solo administradores y superusuarios pueden modificar la secretaría');
+    }
+
+    const response = await fetch('/api/admin/users', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id_usuarios: userId,
+        nom_secre: nomSecre,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id_usuarios === userId ? { ...user, nom_secre: nomSecre } : user
+        )
+      );
+      return { success: true };
+    }
+
+    throw new Error(data.error || 'Error al actualizar la secretaría');
   };
 
   return {
     users,
     roles,
+    secretarias,
     currentUserRole,
     loading,
     error,
     updateUserRole,
+    updateUserSecretaria,
     isAdmin: currentUserRole === 1,
+    canEditSecretaria: currentUserRole === 1 || currentUserRole === 2,
   };
 }

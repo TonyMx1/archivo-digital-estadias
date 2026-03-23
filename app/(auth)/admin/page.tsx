@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import UsersTable from '@/components/UsersTable';
 import PaginationControls from '@/components/PaginationControls';
 import ErrorState from '@/components/ErrorState';
-import { useAdminUsers, Role } from '@/hooks/useAdminUsers';
+import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { usePagination } from '@/hooks/usePagination';
 import { PERMISOS } from '@/lib/permisos';
 
@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [newUserIdGeneral, setNewUserIdGeneral] = useState('');
   const [newUserNombre, setNewUserNombre] = useState('');
   const [newUserRolId, setNewUserRolId] = useState<number | null>(null);
+  const [newUserSecretaria, setNewUserSecretaria] = useState('');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   
   // Estado para gestión de roles y permisos
@@ -59,7 +60,17 @@ export default function AdminPage() {
   const [newRoleName, setNewRoleName] = useState('');
   const [isSubmittingRole, setIsSubmittingRole] = useState(false);
   
-  const { users, roles, loading, error, isAdmin, updateUserRole } = useAdminUsers();
+  const {
+    users,
+    roles,
+    secretarias,
+    loading,
+    error,
+    isAdmin,
+    canEditSecretaria,
+    updateUserRole,
+    updateUserSecretaria,
+  } = useAdminUsers();
   const { currentItems, currentPage, totalPages, handlePageChange } = 
     usePagination(users, USERS_PER_PAGE);
 
@@ -111,6 +122,7 @@ export default function AdminPage() {
     setLookupRawData(null);
     setNewUserIdGeneral('');
     setNewUserNombre('');
+    setNewUserSecretaria('');
     setNewUserRolId(null);
     setIsCreatingUser(false);
   };
@@ -203,6 +215,10 @@ export default function AdminPage() {
       setLookupError('Selecciona un rol');
       return;
     }
+    if (!newUserSecretaria) {
+      setLookupError('Selecciona una secretaría');
+      return;
+    }
 
     setIsCreatingUser(true);
     try {
@@ -215,6 +231,7 @@ export default function AdminPage() {
           id_general: newUserIdGeneral.trim(),
           nombre_usuario: newUserNombre.trim() || undefined,
           id_rol: newUserRolId,
+          nom_secre: newUserSecretaria,
         }),
       });
 
@@ -325,6 +342,18 @@ export default function AdminPage() {
       showAlert('Rol actualizado exitosamente', 'success');
     } catch (error) {
       showAlert(error instanceof Error ? error.message : 'Error al actualizar el rol', 'error');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleSecretariaChange = async (userId: number, nomSecre: string | null) => {
+    setUpdatingUserId(userId);
+    try {
+      await updateUserSecretaria(userId, nomSecre);
+      showAlert('Secretaría actualizada exitosamente', 'success');
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : 'Error al actualizar la secretaría', 'error');
     } finally {
       setUpdatingUserId(null);
     }
@@ -547,10 +576,13 @@ export default function AdminPage() {
                     <UsersTable
                       users={currentItems}
                       roles={roles}
+                      secretarias={secretarias}
                       isAdmin={isAdmin}
+                      canEditSecretaria={canEditSecretaria}
                       updatingUserId={updatingUserId}
                       deletingUserId={deletingUserId}
                       onRoleChange={handleRoleChange}
+                      onSecretariaChange={handleSecretariaChange}
                       onDeleteUser={handleDeleteUser}
                       canDeleteUsers={hasPermission(PERMISOS.ELIMINAR_USUARIOS)}
                     />
@@ -662,6 +694,25 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Asignar Secretaría</label>
+                        <select
+                          value={newUserSecretaria}
+                          onChange={(e) => setNewUserSecretaria(e.target.value)}
+                          className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-sm text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={isCreatingUser}
+                        >
+                          <option value="" disabled>Selecciona una secretaría</option>
+                          {secretarias.map((secretaria) => (
+                            <option
+                              key={secretaria.id_secretaria}
+                              value={secretaria.nombre_secretaria}
+                            >
+                              {secretaria.nombre_secretaria}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Asignar Rol</label>
                         <select
                           value={newUserRolId ?? ''}
@@ -679,12 +730,12 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {lookupRawData && (
+                    {/* {lookupRawData && (
                       <details className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                         <summary className="cursor-pointer text-sm font-semibold text-gray-700">Ver respuesta del CUS</summary>
                         <pre className="mt-2 text-xs text-gray-700 overflow-auto max-h-60">{JSON.stringify(lookupRawData, null, 2)}</pre>
                       </details>
-                    )}
+                    )} */}
 
                     <div className="flex gap-3 justify-end pt-2">
                       {/* <button

@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
 
     const userRole = payload.id_rol;
     let nombreCompleto = null;
-    let nomSecre: string | undefined;
 
     // Si hay cusToken, intentar actualizar el nombre
     if (cusToken) {
@@ -71,14 +70,10 @@ export async function POST(request: NextRequest) {
           if (isActuallyJson) {
             const responseData = JSON.parse(textResponse);
             nombreCompleto = responseData?.data?.nombre_completo;
-            nomSecre = responseData?.data?.departamento
-              ? String(responseData.data.departamento).trim()
-              : undefined;
 
-            if (nombreCompleto || nomSecre) {
+            if (nombreCompleto) {
               await updateUserProfile(payload.id_usuarios, {
                 nombre_usuario: nombreCompleto,
-                nom_secre: nomSecre,
               });
             }
           }

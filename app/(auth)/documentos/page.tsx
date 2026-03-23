@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSecretarias } from "@/hooks/useSecretarias";
 import { PERMISOS } from "@/lib/permisos";
 import DocumentosModal from "@/components/DocumentosModal";
@@ -13,12 +14,45 @@ interface TipoDocumento {
   nombre_documento: string;
 }
 
+let tiposDocumentoCache: TipoDocumento[] | null = null;
+let tiposDocumentoRequest: Promise<TipoDocumento[]> | null = null;
+
+async function fetchTiposDocumentoCatalogo() {
+  if (tiposDocumentoCache) {
+    return tiposDocumentoCache;
+  }
+
+  if (!tiposDocumentoRequest) {
+    tiposDocumentoRequest = (async () => {
+      const response = await fetch('/api/tipo-documento');
+      if (!response.ok) {
+        throw new Error('No se pudieron cargar los tipos de documento');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error('No se pudieron cargar los tipos de documento');
+      }
+
+      tiposDocumentoCache = data.tiposDocumento || [];
+      return tiposDocumentoCache ?? [];
+    })().finally(() => {
+      tiposDocumentoRequest = null;
+    });
+  }
+
+  return tiposDocumentoRequest;
+}
+
 export default function DocumentosPage() {
   const { documentos, loading, error, fetchDocumentos, eliminarDocumento } = useDocumentos();
+  const { user: currentUserData, loading: currentUserLoading } = useCurrentUser();
   const { secretarias } = useSecretarias();
   const [currentUserRole, setCurrentUserRole] = useState<number | null>(null);
+  const [currentUserSecretaria, setCurrentUserSecretaria] = useState<string | null>(null);
+  const [userContextLoaded, setUserContextLoaded] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
-  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>(tiposDocumentoCache || []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
   const [detallesDocumento, setDetallesDocumento] = useState<Documento | null>(null);
@@ -99,6 +133,46 @@ export default function DocumentosPage() {
   const canEliminarDocumentos = hasPermission(PERMISOS.ELIMINAR_DOCUMENTOS);
   const canEditarDocumentos = hasPermission(PERMISOS.EDITAR_DOCUMENTOS);
   const canCrearDocumentos = hasPermission(PERMISOS.CREAR_DOCUMENTOS);
+  const hasGlobalDocumentAccess = currentUserRole === 1 || currentUserRole === 2;
+
+  const normalizeSecretariaName = (value: string | null | undefined) => {
+    if (!value) return "";
+
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
+  };
+
+  const secretariaAsignada = useMemo(() => {
+    if (!currentUserSecretaria) return null;
+
+    const normalizedName = normalizeSecretariaName(currentUserSecretaria);
+    return (
+      secretarias.find((secretaria) =>
+        [secretaria.nombre_secretaria, secretaria.sec_nomcl]
+          .filter((candidate): candidate is string => Boolean(candidate))
+          .some(
+            (candidate) => normalizeSecretariaName(candidate) === normalizedName
+          )
+      ) || null
+    );
+  }, [currentUserSecretaria, secretarias]);
+
+  const isRestrictedToAssignedSecretaria =
+    currentUserRole !== null && !hasGlobalDocumentAccess;
+  const secretariasDisponibles = isRestrictedToAssignedSecretaria
+    ? secretariaAsignada
+      ? [secretariaAsignada]
+      : []
+    : secretarias;
+  const canLoadDocumentos =
+    userContextLoaded &&
+    (!isRestrictedToAssignedSecretaria ||
+      !currentUserSecretaria ||
+      Boolean(secretariaAsignada));
 
   // Para el modal: si está editando, necesita permiso de editar. Si está creando, necesita permiso de crear
   const canEditCurrentDocument = editingDocumento ? canEditarDocumentos : canCrearDocumentos;
@@ -139,13 +213,8 @@ export default function DocumentosPage() {
   useEffect(() => {
     const loadTiposDocumento = async () => {
       try {
-        const response = await fetch('/api/tipo-documento');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setTiposDocumento(data.tiposDocumento || []);
-          }
-        }
+        const tipos = await fetchTiposDocumentoCatalogo();
+        setTiposDocumento(tipos);
       } catch (error) {
         console.error('Error al cargar tipos de documento:', error);
       }
@@ -154,44 +223,57 @@ export default function DocumentosPage() {
     loadTiposDocumento();
   }, []);
 
-  // Cargar rol y permisos del usuario actual
+  // Sincronizar rol y permisos del usuario actual
   useEffect(() => {
-    const loadUserRoleAndPermissions = async () => {
-      try {
-        const response = await fetch("/api/user");
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.success) {
-          setCurrentUserRole(data.user.id_rol);
+    if (currentUserLoading) {
+      return;
+    }
 
-          // Cargar permisos del usuario
-          const permisosResponse = await fetch("/api/user/permisos");
-          if (permisosResponse.ok) {
-            const permisosData = await permisosResponse.json();
-            if (permisosData.success) {
-              setUserPermissions(permisosData.permisos || []);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error al obtener rol y permisos de usuario:", error);
-      }
-    };
+    setCurrentUserRole(currentUserData?.id_rol ?? null);
+    setCurrentUserSecretaria(currentUserData?.nom_secre || null);
+    setUserPermissions(currentUserData?.permisos || []);
+    setUserContextLoaded(true);
+  }, [currentUserData, currentUserLoading]);
 
-    loadUserRoleAndPermissions();
-  }, []);
+  useEffect(() => {
+    if (!isRestrictedToAssignedSecretaria || !secretariaAsignada) {
+      return;
+    }
+
+    setFiltroSecretaria((previousValue) =>
+      previousValue === secretariaAsignada.id_secretaria
+        ? previousValue
+        : secretariaAsignada.id_secretaria
+    );
+  }, [isRestrictedToAssignedSecretaria, secretariaAsignada]);
 
   // Cargar documentos
   useEffect(() => {
+    if (!canLoadDocumentos) {
+      return;
+    }
+
     const filters: any = {};
-    if (filtroSecretaria) filters.id_secre = Number(filtroSecretaria);
+    if (isRestrictedToAssignedSecretaria && secretariaAsignada) {
+      filters.id_secre = secretariaAsignada.id_secretaria;
+    } else if (filtroSecretaria) {
+      filters.id_secre = Number(filtroSecretaria);
+    }
     if (filtroTipo) filters.tipo_doc = Number(filtroTipo);
     if (filtroFecha) filters.fecha_doc = filtroFecha;
     if (filtroEstatus) filters.estatus_doc = filtroEstatus;
 
     fetchDocumentos(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroSecretaria, filtroTipo, filtroFecha, filtroEstatus]);
+  }, [
+    filtroSecretaria,
+    filtroTipo,
+    filtroFecha,
+    filtroEstatus,
+    isRestrictedToAssignedSecretaria,
+    secretariaAsignada,
+    canLoadDocumentos,
+  ]);
 
   // Animación para modal de alerta
   useEffect(() => {
@@ -372,7 +454,11 @@ export default function DocumentosPage() {
   const handleDocumentoGuardado = () => {
     // Recargar con los filtros actuales
     const filters: any = {};
-    if (filtroSecretaria) filters.id_secre = Number(filtroSecretaria);
+    if (isRestrictedToAssignedSecretaria && secretariaAsignada) {
+      filters.id_secre = secretariaAsignada.id_secretaria;
+    } else if (filtroSecretaria) {
+      filters.id_secre = Number(filtroSecretaria);
+    }
     if (filtroTipo) filters.tipo_doc = Number(filtroTipo);
     if (filtroFecha) filters.fecha_doc = filtroFecha;
     if (filtroEstatus) filters.estatus_doc = filtroEstatus;
@@ -382,7 +468,11 @@ export default function DocumentosPage() {
   };
 
   const limpiarFiltros = () => {
-    setFiltroSecretaria("");
+    setFiltroSecretaria(
+      isRestrictedToAssignedSecretaria && secretariaAsignada
+        ? secretariaAsignada.id_secretaria
+        : ""
+    );
     setFiltroTipo("");
     setFiltroFecha("");
     setFiltroEstatus("Activo");
@@ -471,13 +561,16 @@ export default function DocumentosPage() {
           {/* Mensaje */}
           <p className="text-gray-600 mb-6">
             No tienes los permisos necesarios para acceder a esta sección.
-            Contacta al administrador si crees que esto es un error.
+            <br />
+            O no estás asignado a una secretaría que tenga documentos disponibles.
+            <br />
+            Contacta al administrador si crees que esto es un error o necesitas acceso.
           </p>
 
           {/* Botón de retorno */}
           <Link
             href="/"
-            className="inline-block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
+            className="inline-block px-6 py-3 bg-[#0076aa] text-white font-semibold rounded-lg hover:bg-[#094a75] transition-colors shadow-md"
           >
             ⬅️ Volver al inicio
           </Link>
@@ -577,20 +670,31 @@ export default function DocumentosPage() {
                     Secretaría
                   </label>
                   <select
-                    value={filtroSecretaria}
+                    value={
+                      isRestrictedToAssignedSecretaria && secretariaAsignada
+                        ? secretariaAsignada.id_secretaria
+                        : filtroSecretaria
+                    }
                     onChange={(e) => {
                       setFiltroSecretaria(e.target.value ? Number(e.target.value) : "");
                       setCurrentPage(1);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 text-sm"
+                    disabled={isRestrictedToAssignedSecretaria}
                   >
-                    <option value="">Todas</option>
-                    {secretarias.map((sec) => (
+                    {!isRestrictedToAssignedSecretaria && <option value="">Todas</option>}
+                    {secretariasDisponibles.map((sec) => (
                       <option key={sec.id_secretaria} value={sec.id_secretaria}>
                         {sec.nombre_secretaria}
                       </option>
                     ))}
                   </select>
+                  {isRestrictedToAssignedSecretaria && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Tu acceso está limitado a{" "}
+                      {secretariaAsignada?.nombre_secretaria || currentUserSecretaria || "tu secretaría asignada"}.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1145,6 +1249,9 @@ export default function DocumentosPage() {
         documento={editingDocumento}
         isEditing={!!editingDocumento}
         isReadOnly={!canEditCurrentDocument}
+        secretarias={secretarias}
+        currentUserRole={currentUserRole}
+        currentUserSecretaria={currentUserSecretaria}
       />
 
       {/* Modal de detalles del documento */}

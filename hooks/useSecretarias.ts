@@ -1,52 +1,76 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
-interface Secretaria {
+export interface Secretaria {
   id_secretaria: number;
   nombre_secretaria: string;
   sec_nomcl: string | null;
 }
 
+let secretariasCache: Secretaria[] | null = null;
+let secretariasRequest: Promise<Secretaria[]> | null = null;
+
+async function fetchSecretariasCatalogo() {
+  if (secretariasCache) {
+    return secretariasCache;
+  }
+
+  if (!secretariasRequest) {
+    secretariasRequest = (async () => {
+      const response = await fetch('/api/secretarias');
+      if (!response.ok) {
+        throw new Error('No se pudieron cargar las secretarías');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error('No se pudieron cargar las secretarías');
+      }
+
+      secretariasCache = data.secretarias || [];
+      return secretariasCache ?? [];
+    })().finally(() => {
+      secretariasRequest = null;
+    });
+  }
+
+  return secretariasRequest;
+}
+
 export function useSecretarias() {
-  const router = useRouter();
-  const [secretarias, setSecretarias] = useState<Secretaria[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [secretarias, setSecretarias] = useState<Secretaria[]>(secretariasCache || []);
+  const [loading, setLoading] = useState(!secretariasCache);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadData = async () => {
       try {
-        const userResponse = await fetch('/api/user');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          if (userData.success && userData.user?.id_rol === 9) {
-            router.push('/visitante');
-            return;
-          }
-        }
+        setLoading(!secretariasCache);
+        setError(null);
 
-        const response = await fetch('/api/secretarias');
-        if (!response.ok) {
-          setError('No se pudieron cargar las secretarías');
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success) {
-          setSecretarias(data.secretarias || []);
-        } else {
-          setError('No se pudieron cargar las secretarías');
+        const data = await fetchSecretariasCatalogo();
+        if (!cancelled) {
+          setSecretarias(data);
         }
       } catch (error) {
         console.error('Error al cargar secretarías:', error);
-        setError('Error al cargar las secretarías');
+        if (!cancelled) {
+          setError('Error al cargar las secretarías');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     loadData();
-  }, [router]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return { secretarias, loading, error };
 }
