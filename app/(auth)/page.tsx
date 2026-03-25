@@ -14,6 +14,7 @@ export default function HomePage() {
     dependencias: 0,
     dependenciasActivas: null as number | null,
     documentos: 0, // Nuevo campo
+    archivosPrestadosActivos: 0,
     documentosPorSecretaria: [] as Array<{id_secretaria: number, nombre_secretaria: string, total_documentos: number}>
   });
 
@@ -78,10 +79,11 @@ export default function HomePage() {
         </div>
 
         {/* Tarjetas de Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto w-full px-4">
           {loadingStats ? (
             <>
-              {/* Mostrar 4 esqueletos durante la carga */}
+              {/* Mostrar 5 esqueletos durante la carga */}
+              <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
@@ -94,7 +96,7 @@ export default function HomePage() {
                 onClick={() => router.push('/documentos')}
                 className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200 text-left"
                 style={{
-                  background: 'linear-gradient(to bottom right, #e67425, #b85a1d)'
+                  background: '#e67425'
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -124,12 +126,42 @@ export default function HomePage() {
                 </div>
               </button>
 
-              {/* Tarjeta de Secretarías - Color #0076aa */}
+              {/* Tarjeta de Archivos Prestados Activos - Color #faa21b */}
+              <button
+                onClick={() => router.push('/prestamo')}
+                className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200 text-left"
+                style={{
+                  background: '#faa21b'
+                }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <svg
+                    className="w-12 h-12"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+
+                  </svg>
+                </div>
+                <div className="text-5xl font-bold mb-2">
+                  {statistics.archivosPrestadosActivos}
+                </div>
+                <div className="text-white/90 text-lg font-semibold">
+                  Archivos Prestados
+                </div>
+                <div className="text-white/70 text-sm mt-2">
+                  Actualmente activos
+                </div>
+              </button>
+              {/* Tarjeta de Secretarías - Color #0b3b60 */}
               <button
                 onClick={() => router.push('/secretarias')}
                 className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200 text-left"
                 style={{
-                  background: 'linear-gradient(to bottom right, #0076aa, #005580)'
+                  background: '#0b3b60'
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -159,11 +191,11 @@ export default function HomePage() {
                 </div>
               </button>
 
-              {/* Tarjeta de Dependencias - Color #00ae6f */}
+              {/* Tarjeta de Dependencias - Color #408740 */}
               <div
                 className="rounded-xl shadow-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200"
                 style={{
-                  background: 'linear-gradient(to bottom right, #00ae6f, #008a56)'
+                  background: '#408740'
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -189,7 +221,7 @@ export default function HomePage() {
                   Dependencias
                 </div>
                 <div className="text-white/70 text-sm mt-2">
-                  Total registradas
+                  Registradas
                 </div>
               </div>
 
@@ -282,3 +314,4 @@ export default function HomePage() {
     </div>
   );
 }
+
