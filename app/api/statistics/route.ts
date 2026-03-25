@@ -19,6 +19,19 @@ export async function GET() {
     const documentosQuery = await pool.query(
       `SELECT COUNT(*) as total FROM documentos`
     );
+
+    // Contar archivos prestados activos
+    let archivosPrestadosActivos = 0;
+    try {
+      const prestamosActivosQuery = await pool.query(
+        `SELECT COUNT(*) as total
+         FROM prestamos_documentos
+         WHERE estatus_prestamo IN ('Prestado', 'Vencido')`
+      );
+      archivosPrestadosActivos = parseInt(prestamosActivosQuery.rows[0].total);
+    } catch {
+      // Si no existe la tabla de préstamos, ignorar
+    }
     
     // Contar documentos por secretaría
     const documentosPorSecretariaQuery = await pool.query(
@@ -47,6 +60,7 @@ export async function GET() {
         dependencias: parseInt(dependenciasQuery.rows[0].total),
         dependenciasActivas: dependenciasActivas,
         documentos: parseInt(documentosQuery.rows[0].total),
+        archivosPrestadosActivos,
         documentosPorSecretaria: documentosPorSecretariaQuery.rows
       }
     });
