@@ -152,6 +152,9 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         required
                       />
                     </div>
+
+                    {/* Validación de longitud de CURP */}
+{/*                     
                     {curpLength > 0 && curpLength !== 18 && (
                       <div className="mt-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
                         <p className="text-xs text-red-600 text-center" aria-live="polite">
@@ -165,7 +168,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                       <div className="mt-1 bg-green-50 border border-green-200 rounded-lg px-2 py-1">
                         <p className="text-xs text-center text-green-600">CURP válido ✅</p>
                       </div>
-                    )}
+                    )} */}
                   </div>
 
                   <div className="rounded-xl p-4 border border-gray-200">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromCookies, verifyToken } from "@/lib/auth";
 import { getDocumentoById, hasPermission } from "@/lib/db";
 import {
+  canAccessDocumentDependencia,
   canAccessDocumentSecretaria,
   DocumentScopeError,
   getDocumentScopeForUser,
@@ -80,6 +81,20 @@ export async function GET(
       );
     }
 
+    if (
+      scope.restricted &&
+      !canAccessDocumentDependencia(
+        payload.id_rol,
+        documento.id_dep,
+        scope.allowedDependenciaId
+      )
+    ) {
+      return NextResponse.json(
+        { error: "No puedes acceder a documentos de otra dependencia" },
+        { status: 403 }
+      );
+    }
+
     const fileUrl = documento.url_cons_doc;
 
     if (!fileUrl) {
@@ -121,7 +136,7 @@ export async function GET(
     if (contentLength) headers.set("Content-Length", contentLength);
 
     return new NextResponse(upstreamRes.body, { status: 200, headers });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof DocumentScopeError) {
       return NextResponse.json(
         { error: error.message },
@@ -131,7 +146,7 @@ export async function GET(
 
     console.error("Error al servir archivo de documento:", error);
     return NextResponse.json(
-      { error: error?.message || "Error al servir archivo" },
+      { error: error instanceof Error ? error.message : "Error al servir archivo" },
       { status: 500 }
     );
   }

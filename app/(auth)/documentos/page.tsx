@@ -488,7 +488,7 @@ export default function DocumentosPage() {
 
   // Skeleton loading component
   const DocumentoSkeleton = () => (
-    <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 animate-pulse">
+    <div className="bg-linear-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 animate-pulse">
       {/* Encabezado con ícono y etiquetas */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -641,7 +641,7 @@ export default function DocumentosPage() {
               {canCrearDocumentos && (
                 <button
                   onClick={handleNuevoDocumento}
-                  className="px-4 py-2 bg-gradient-to-r from-[#00ae6f] to-[#408740] text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-[#408740]/30 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 whitespace-nowrap"
+                  className="px-4 py-2 bg-linear-to-r from-[#00ae6f] to-[#408740] text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-[#408740]/30 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 whitespace-nowrap"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -768,7 +768,7 @@ export default function DocumentosPage() {
           <div className="bg-white rounded-3xl shadow-xl p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
+                <div className="w-14 h-14 flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-50 rounded-2xl">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -784,7 +784,7 @@ export default function DocumentosPage() {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-2xl font-bold text-gray-900 break-words">DOCUMENTOS</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 wrap-break-word">DOCUMENTOS</h2>
                   {searchQuery.trim() && mensajeEspecial && (
                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
@@ -816,7 +816,7 @@ export default function DocumentosPage() {
                 ))}
               </div>
             ) : documentosFiltrados.length === 0 ? (
-              <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl">
+              <div className="text-center py-16 bg-linear-to-br from-gray-50 to-blue-50 rounded-2xl">
                 <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-white rounded-full shadow-lg">
                   <svg
                     className="w-12 h-12 text-gray-400"
@@ -843,12 +843,12 @@ export default function DocumentosPage() {
                   {documentosPaginados.map((documento) => (
                     <div
                       key={documento.id_doc}
-                      className="group flex h-full flex-col bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                      className="group flex h-full flex-col bg-linear-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 hover:border-blue-300 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
                     >
                       {/* Encabezado con ícono y etiquetas */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+                          <div className="w-12 h-12 flex items-center justify-center bg-linear-to-br from-blue-100 to-indigo-100 rounded-xl group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
@@ -913,14 +913,14 @@ export default function DocumentosPage() {
 
                         <div>
                           <p className="text-sm text-gray-600 font-medium mb-1">Secretaría</p>
-                          <p className="text-gray-900 break-words whitespace-normal leading-relaxed">
+                          <p className="text-gray-900 wrap-break-word whitespace-normal leading-relaxed">
                             {documento.nombre_secretaria || "-"}
                           </p>
                         </div>
 
                         <div>
                           <p className="text-sm text-gray-600 font-medium mb-1">Dependencia</p>
-                          <p className="text-gray-900 break-words whitespace-normal leading-relaxed">
+                          <p className="text-gray-900 wrap-break-word whitespace-normal leading-relaxed">
                             {documento.nombre_dependencia || "-"}
                           </p>
                         </div>
@@ -1267,7 +1267,7 @@ export default function DocumentosPage() {
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
+                <div className="w-12 h-12 flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"

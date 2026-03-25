@@ -3,26 +3,59 @@
 import React, { useState, useEffect } from 'react';
 import UsersTable from '@/components/UsersTable';
 import PaginationControls from '@/components/PaginationControls';
-import ErrorState from '@/components/ErrorState';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { usePagination } from '@/hooks/usePagination';
 import { PERMISOS } from '@/lib/permisos';
 
 const USERS_PER_PAGE = 10;
+type DependenciaOption = {
+  id_dependencia?: number;
+  nombre_dependencia: string;
+};
 
-// Lista de todos los permisos disponibles para asignar
-const TODOS_LOS_PERMISOS = Object.values(PERMISOS);
+const dependenciasCache = new Map<number, DependenciaOption[]>();
+const dependenciasPendingRequests = new Map<number, Promise<DependenciaOption[]>>();
 
-interface RolConPermisos {
-  id_rol: number;
-  nombre_rol: string;
-  permisos: string[];
+async function getDependenciasBySecretaria(secretariaId: number): Promise<DependenciaOption[]> {
+  const cachedDependencias = dependenciasCache.get(secretariaId);
+  if (cachedDependencias) {
+    return cachedDependencias;
+  }
+
+  const pendingRequest = dependenciasPendingRequests.get(secretariaId);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const request = fetch(`/api/dependencias?secretariaId=${secretariaId}`)
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error('Error al cargar dependencias');
+      }
+
+      const data = (await response.json()) as {
+        success?: boolean;
+        dependencias?: DependenciaOption[];
+        error?: string;
+      };
+      if (!data.success) {
+        throw new Error(data.error || 'Error al cargar dependencias');
+      }
+
+      const dependencias = data.dependencias || [];
+      dependenciasCache.set(secretariaId, dependencias);
+      return dependencias;
+    })
+    .finally(() => {
+      dependenciasPendingRequests.delete(secretariaId);
+    });
+
+  dependenciasPendingRequests.set(secretariaId, request);
+  return request;
 }
 
 export default function AdminPage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'roles'>('usuarios');
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [alertModal, setAlertModal] = useState<{
@@ -36,30 +69,19 @@ export default function AdminPage() {
     isOpen: boolean;
     onConfirm: () => void;
   }>({ message: '', isOpen: false, onConfirm: () => {} });
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [confirmVisible, setConfirmVisible] = useState(false);
   const [isAddUserByCurpOpen, setIsAddUserByCurpOpen] = useState(false);
   const [curpToLookup, setCurpToLookup] = useState('');
   const [isLookingUpCurp, setIsLookingUpCurp] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
-  const [lookupRawData, setLookupRawData] = useState<any>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUserIdGeneral, setNewUserIdGeneral] = useState('');
   const [newUserNombre, setNewUserNombre] = useState('');
-  const [newUserRolId, setNewUserRolId] = useState<number | null>(null);
   const [newUserSecretaria, setNewUserSecretaria] = useState('');
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  
-  // Estado para gestión de roles y permisos
-  const [rolesConPermisos, setRolesConPermisos] = useState<RolConPermisos[]>([]);
-  const [loadingPermisos, setLoadingPermisos] = useState(false);
-  const [selectedRol, setSelectedRol] = useState<number | null>(null);
-  const [updatingPermiso, setUpdatingPermiso] = useState<string | null>(null);
-  
-  // Estado para agregar nuevo rol
-  const [showAddRoleForm, setShowAddRoleForm] = useState(false);
-  const [newRoleName, setNewRoleName] = useState('');
-  const [isSubmittingRole, setIsSubmittingRole] = useState(false);
-  
+  const [newUserDependencia, setNewUserDependencia] = useState('');
+  const [newUserDependencias, setNewUserDependencias] = useState<DependenciaOption[]>([]);
+  const [loadingNewUserDependencias, setLoadingNewUserDependencias] = useState(false);
+  const [newUserRolId, setNewUserRolId] = useState<number | null>(null);
+
   const {
     users,
     roles,
@@ -70,6 +92,7 @@ export default function AdminPage() {
     canEditSecretaria,
     updateUserRole,
     updateUserSecretaria,
+    updateUserDependencia,
   } = useAdminUsers();
   const { currentItems, currentPage, totalPages, handlePageChange } = 
     usePagination(users, USERS_PER_PAGE);
@@ -78,22 +101,6 @@ export default function AdminPage() {
   const hasPermission = (permission: string) => {
     return userPermissions.includes(PERMISOS.ADMIN_TOTAL) || userPermissions.includes(permission);
   };
-
-  useEffect(() => {
-    if (alertModal.isOpen) {
-      const frame = requestAnimationFrame(() => setAlertVisible(true));
-      return () => cancelAnimationFrame(frame);
-    }
-    setAlertVisible(false);
-  }, [alertModal.isOpen]);
-
-  useEffect(() => {
-    if (confirmModal.isOpen) {
-      const frame = requestAnimationFrame(() => setConfirmVisible(true));
-      return () => cancelAnimationFrame(frame);
-    }
-    setConfirmVisible(false);
-  }, [confirmModal.isOpen]);
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info', reloadOnClose = false) => {
     setAlertModal({ message, type, isOpen: true, reloadOnClose });
@@ -119,10 +126,12 @@ export default function AdminPage() {
     setCurpToLookup('');
     setIsLookingUpCurp(false);
     setLookupError(null);
-    setLookupRawData(null);
     setNewUserIdGeneral('');
     setNewUserNombre('');
     setNewUserSecretaria('');
+    setNewUserDependencia('');
+    setNewUserDependencias([]);
+    setLoadingNewUserDependencias(false);
     setNewUserRolId(null);
     setIsCreatingUser(false);
   };
@@ -132,22 +141,29 @@ export default function AdminPage() {
     resetAddUserByCurpModal();
   };
 
-  const extractCusFields = (raw: any) => {
-    const root = raw?.data ?? raw;
-    const data = root?.data ?? root;
+  const getField = (value: unknown, field: string): unknown => {
+    if (typeof value === 'object' && value !== null) {
+      return (value as Record<string, unknown>)[field];
+    }
+    return undefined;
+  };
+
+  const extractCusFields = (raw: unknown) => {
+    const root = getField(raw, 'data') ?? raw;
+    const data = getField(root, 'data') ?? root;
 
     const idGeneralCandidate =
-      data?.id_usuario_general ??
-      data?.id_general ??
-      root?.id_usuario_general ??
-      root?.id_general ??
+      getField(data, 'id_usuario_general') ??
+      getField(data, 'id_general') ??
+      getField(root, 'id_usuario_general') ??
+      getField(root, 'id_general') ??
       '';
 
     const nombreCandidate =
-      data?.nombre_completo ??
-      data?.nombre ??
-      root?.nombre_completo ??
-      root?.nombre ??
+      getField(data, 'nombre_completo') ??
+      getField(data, 'nombre') ??
+      getField(root, 'nombre_completo') ??
+      getField(root, 'nombre') ??
       '';
 
     return {
@@ -158,7 +174,6 @@ export default function AdminPage() {
 
   const handleLookupCurp = async () => {
     setLookupError(null);
-    setLookupRawData(null);
     setNewUserIdGeneral('');
     setNewUserNombre('');
 
@@ -179,12 +194,10 @@ export default function AdminPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        setLookupRawData(data);
         const details = data?.details ? `\n${String(data.details).slice(0, 1000)}` : '';
         throw new Error((data?.error || 'Error al consultar CURP') + details);
       }
 
-      setLookupRawData(data?.data ?? data);
       const extracted = extractCusFields(data?.data ?? data);
       setNewUserIdGeneral(extracted.id_general);
       setNewUserNombre(extracted.nombre_usuario);
@@ -232,6 +245,7 @@ export default function AdminPage() {
           nombre_usuario: newUserNombre.trim() || undefined,
           id_rol: newUserRolId,
           nom_secre: newUserSecretaria,
+          nom_dependencia: newUserDependencia || undefined,
         }),
       });
 
@@ -249,91 +263,56 @@ export default function AdminPage() {
     }
   };
 
-  // Cargar permisos del usuario actual
   useEffect(() => {
-    const loadUserPermissions = async () => {
+    let cancelled = false;
+
+    const loadDependenciasForNewUser = async () => {
+      if (!newUserSecretaria) {
+        setNewUserDependencias([]);
+        setNewUserDependencia('');
+        setLoadingNewUserDependencias(false);
+        return;
+      }
+
+      const secretaria = secretarias.find(
+        (item) => item.nombre_secretaria === newUserSecretaria
+      );
+
+      if (!secretaria) {
+        setNewUserDependencias([]);
+        setNewUserDependencia('');
+        setLoadingNewUserDependencias(false);
+        return;
+      }
+
+      setLoadingNewUserDependencias(true);
       try {
-        const response = await fetch("/api/user/permisos");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setUserPermissions(data.permisos || []);
-          }
+        const dependencias = await getDependenciasBySecretaria(secretaria.id_secretaria);
+        if (!cancelled) {
+          setNewUserDependencias(dependencias);
+          setNewUserDependencia((prev) =>
+            dependencias.some((dep) => dep.nombre_dependencia === prev) ? prev : ''
+          );
         }
       } catch (error) {
-        console.error("Error al cargar permisos:", error);
+        console.error('Error al cargar dependencias para el nuevo usuario:', error);
+        if (!cancelled) {
+          setNewUserDependencias([]);
+          setNewUserDependencia('');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingNewUserDependencias(false);
+        }
       }
     };
 
-    loadUserPermissions();
-  }, []);
+    loadDependenciasForNewUser();
 
-  // Función para eliminar usuario
-  const handleDeleteUser = async (userId: number, userName: string) => {
-    showConfirm(
-      `¿Estás seguro de que deseas eliminar al usuario "${userName}"? Esta acción no se puede deshacer.`,
-      async () => {
-        setDeletingUserId(userId);
-        try {
-          const response = await fetch(`/api/admin/users`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id_usuarios: userId }),
-          });
-
-          if (response.ok) {
-            showAlert('Usuario eliminado exitosamente', 'success', true);
-          } else {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error al eliminar usuario');
-          }
-        } catch (error) {
-          showAlert(error instanceof Error ? error.message : 'Error al eliminar usuario', 'error');
-        } finally {
-          setDeletingUserId(null);
-        }
-      }
-    );
-  };
-
-  // Cargar permisos de todos los roles
-  const loadPermisosRoles = async () => {
-    setLoadingPermisos(true);
-    try {
-      // Cargar permisos para cada rol
-      const permisosPromises = roles.map(async (rol) => {
-        const response = await fetch(`/api/admin/permisos?id_rol=${rol.id_roles}`);
-        if (response.ok) {
-          const data = await response.json();
-          return {
-            id_rol: rol.id_roles,
-            nombre_rol: rol.rol,
-            permisos: data.permisos?.map((p: { nombre_permiso: string }) => p.nombre_permiso) || [],
-          };
-        }
-        return {
-          id_rol: rol.id_roles,
-          nombre_rol: rol.rol,
-          permisos: [],
-        };
-      });
-
-      const resultados = await Promise.all(permisosPromises);
-      setRolesConPermisos(resultados);
-    } catch (error) {
-      console.error('Error al cargar permisos:', error);
-    } finally {
-      setLoadingPermisos(false);
-    }
-  };
-
-  useEffect(() => {
-    if (roles.length > 0 && activeTab === 'roles') {
-      loadPermisosRoles();
-    }
-  }, [roles, activeTab]);
+    return () => {
+      cancelled = true;
+    };
+  }, [newUserSecretaria, secretarias]);
 
   const handleRoleChange = async (userId: number, newRoleId: number) => {
     setUpdatingUserId(userId);
@@ -359,650 +338,418 @@ export default function AdminPage() {
     }
   };
 
-  const handleTogglePermiso = async (idRol: number, nombrePermiso: string, tienePermiso: boolean) => {
-    setUpdatingPermiso(nombrePermiso);
+  const handleDependenciaChange = async (userId: number, nomDependencia: string) => {
+    setUpdatingUserId(userId);
     try {
-      const method = tienePermiso ? 'DELETE' : 'POST';
-      const response = await fetch('/api/admin/permisos', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_rol: idRol, nombre_permiso: nombrePermiso }),
-      });
+      await updateUserDependencia(userId, nomDependencia);
+      showAlert('Dependencia actualizada exitosamente', 'success');
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : 'Error al actualizar la dependencia', 'error');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
 
-      const data = await response.json();
-      
-      if (data.success) {
-        // Actualizar estado local
-        setRolesConPermisos(prev => prev.map(rol => {
-          if (rol.id_rol === idRol) {
-            return {
-              ...rol,
-              permisos: tienePermiso
-                ? rol.permisos.filter(p => p !== nombrePermiso)
-                : [...rol.permisos, nombrePermiso],
-            };
+  const handleDeleteUser = async (userId: number, userName: string) => {
+    showConfirm(
+      `¿Estás seguro de que quieres eliminar al usuario "${userName}"? Esta acción no se puede deshacer.`,
+      async () => {
+        setDeletingUserId(userId);
+        try {
+          const response = await fetch('/api/admin/users', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_usuarios: userId }),
+          });
+
+          const data = await response.json();
+          if (!response.ok || !data?.success) {
+            throw new Error(data?.error || 'Error al eliminar usuario');
           }
-          return rol;
-        }));
-      } else {
-        showAlert(data.error || 'Error al actualizar permiso', 'error');
+
+          showAlert('Usuario eliminado exitosamente', 'success', true);
+        } catch (error) {
+          showAlert(error instanceof Error ? error.message : 'Error al eliminar usuario', 'error');
+        } finally {
+          setDeletingUserId(null);
+        }
       }
-    } catch (error) {
-      console.error('Error al actualizar permiso:', error);
-      showAlert('Error al actualizar permiso', 'error');
-    } finally {
-      setUpdatingPermiso(null);
-    }
+    );
   };
 
-  const handleAddRole = async () => {
-    if (!newRoleName.trim()) {
-      showAlert('Por favor ingresa un nombre para el rol', 'error');
-      return;
-    }
-
-    setIsSubmittingRole(true);
-    try {
-      const response = await fetch('/api/admin/roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rol: newRoleName.trim() }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // Agregar el nuevo rol a la lista de roles con permisos
-        setRolesConPermisos(prev => [...prev, {
-          id_rol: data.id,
-          nombre_rol: newRoleName.trim(),
-          permisos: [],
-        }]);
-        setNewRoleName('');
-        setShowAddRoleForm(false);
-        showAlert('Rol agregado exitosamente', 'success', true);
-        // Recargar la página para actualizar la lista de roles
-      } else {
-        showAlert('Error al agregar el rol: ' + (data.error || 'Error desconocido'), 'error');
+  // Cargar permisos del usuario actual
+  useEffect(() => {
+    const loadUserPermissions = async () => {
+      try {
+        const response = await fetch("/api/user/permisos");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUserPermissions(data.permisos || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar permisos del usuario:', error);
       }
-    } catch (error) {
-      console.error('Error al agregar rol:', error);
-      showAlert('Error al agregar el rol', 'error');
-    } finally {
-      setIsSubmittingRole(false);
-    }
-  };
-
-  const getRolBadgeColor = (idRol: number) => {
-    switch (idRol) {
-      case 1: return 'bg-red-100 text-red-800';
-      case 2: return 'bg-yellow-100 text-yellow-800';
-      case 7: return 'bg-blue-100 text-blue-800';
-      case 9: return 'bg-green-100 text-green-800';
-      case 10: return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getRolBadgeLabel = (idRol: number) => {
-    switch (idRol) {
-      case 1: return 'Administrador';
-      case 2: return 'Superusuario';
-      case 7: return 'Usuario Regular';
-      case 9: return 'Visitante';
-      case 10: return 'Visor';
-      default: return 'Rol Personalizado';
-    }
-  };
-
-  // Agrupar permisos por categoría
-  const getPermisosPorCategoria = () => {
-    const categorias: Record<string, string[]> = {
-      'Visualización': TODOS_LOS_PERMISOS.filter(p => p.startsWith('ver_')),
-      'Edición': TODOS_LOS_PERMISOS.filter(p => p.startsWith('editar_')),
-      'Creación': TODOS_LOS_PERMISOS.filter(p => p.startsWith('crear_')),
-      'Eliminación': TODOS_LOS_PERMISOS.filter(p => p.startsWith('eliminar_')),
-      'Otros': TODOS_LOS_PERMISOS.filter(p => 
-        !p.startsWith('ver_') && 
-        !p.startsWith('editar_') && 
-        !p.startsWith('crear_') && 
-        !p.startsWith('eliminar_')
-      ),
     };
-    return categorias;
-  };
 
-  // Skeleton components
-  const UserTableSkeleton = () => (
-    <div className="space-y-4">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </div>
-            <div className="h-8 bg-gray-200 rounded w-24"></div>
-            <div className="h-8 bg-gray-200 rounded w-8"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const RolesSkeleton = () => (
-    <div className="space-y-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden animate-pulse">
-          <div className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-              <div className="flex-1 space-y-2">
-                <div className="h-5 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-              </div>
-              <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  if (error) return <ErrorState error={error} />;
+    loadUserPermissions();
+  }, []);
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-            {/* Tabs de navegación */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveTab('usuarios')}
-                  className={`px-6 py-3 rounded-t-lg font-semibold transition-colors ${
-                    activeTab === 'usuarios'
-                      ? 'bg-[#0b3b60] text-primary'
-                      : 'bg-[#0076aa] text-white hover:bg-[#005a85]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    Usuarios
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('roles')}
-                  className={`px-6 py-3 rounded-t-lg font-semibold transition-colors ${
-                    activeTab === 'roles'
-                      ? 'bg-[#0b3b60] text-primary'
-                      : 'bg-[#0076aa] text-white hover:bg-[#005a85]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Roles y Permisos
-                  </div>
-                </button>
-              </div>
+    <div className="space-y-6 px-4 md:px-6">
+      {/* Header Section */}
+      <div className="bg-[#0076aa] rounded-lg shadow-md p-6 text-white">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
+            <p className="text-gray-300 mt-1">
+              Administra usuarios del sistema, asigna roles, secretarías y dependencias.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setIsAddUserByCurpOpen(true)}
+              disabled={!hasPermission(PERMISOS.EDITAR_USUARIOS)}
+              className="rounded-lg bg-white text-[#0076aa] px-6 py-3 text-sm font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            >
+              Añadir usuario
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => window.location.href = '/permisos'}
+                className="rounded-lg bg-white text-[#0076aa] px-6 py-3 text-sm font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+              >
+                Permisos
+              </button>
+            )}
+          </div>
+          
+        </div>
+      </div>
 
-              {activeTab === 'usuarios' && hasPermission(PERMISOS.EDITAR_USUARIOS) && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setIsAddUserByCurpOpen(true)}
-                    className="px-4 py-2 bg-[#00ae6f] text-white font-semibold rounded-lg hover:bg-[#408740] transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    Añadir usuario por CURP
-                  </button>
-                </div>
-              )}
+      {/* Alert Section */}
+      {(alertModal.message || error) && (
+        <div className={`rounded-lg px-4 py-4 text-sm font-medium border-l-4 ${alertModal.type === 'error'
+            ? "bg-red-50 border-red-500 text-red-700"
+            : "bg-green-50 border-green-500 text-green-700"
+          }`}>
+          <div className="flex items-start gap-3">
+            {alertModal.type === 'error' ? (
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414 1.414L11.414 10l1.293 1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            )}
+            <span>{alertModal.message || error}</span>
+          </div>
+        </div>
+      )}
+      
+
+      {/* Table Section */}
+      {loading ? (
+        <div className="bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700 min-w-[180px]">Usuario</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700 min-w-[140px]">Rol</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700 min-w-[200px]">Secretaría</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700 min-w-[200px]">Dependencia</th>
+                  <th className="px-4 py-3 text-center font-semibold text-slate-700 min-w-[80px]">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <tr key={`skeleton-${index}`} className="max-w-sm animate-pulse">
+                    <td className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 rounded w-32"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-5 bg-gray-200 rounded-full w-16"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="h-8 bg-gray-200 rounded-lg w-16 mx-auto"></div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <UsersTable
+          users={currentItems}
+          roles={roles}
+          secretarias={secretarias}
+          isAdmin={isAdmin && hasPermission(PERMISOS.EDITAR_USUARIOS)}
+          canEditSecretaria={canEditSecretaria && hasPermission(PERMISOS.EDITAR_USUARIOS)}
+          updatingUserId={updatingUserId}
+          deletingUserId={deletingUserId}
+          onRoleChange={handleRoleChange}
+          onSecretariaChange={handleSecretariaChange}
+          onDependenciaChange={handleDependenciaChange}
+          onDeleteUser={handleDeleteUser}
+          canDeleteUsers={hasPermission(PERMISOS.ELIMINAR_USUARIOS)}
+        />
+      )}
+
+      {/* Pagination */}
+      {!loading && currentItems.length > 0 && (
+        <div className="flex justify-center">
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={users.length}
+            itemsPerPage={USERS_PER_PAGE}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
+
+      {/* Modal para agregar usuario por CURP */}
+      {isAddUserByCurpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-2xl flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-[#0076aa] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">Registrar nuevo usuario</h2>
+                {/* <p className="text-blue-100 text-sm mt-1">Completa los datos del solicitante</p> */}
+              </div>
+              <button
+                onClick={closeAddUserByCurpModal}
+                className="text-white hover:text-blue-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            {/* Contenido de la pestaña Usuarios */}
-            {activeTab === 'usuarios' && (
-              <>
-                {loading ? (
-                  <UserTableSkeleton />
-                ) : (
-                  <>
-                    <UsersTable
-                      users={currentItems}
-                      roles={roles}
-                      secretarias={secretarias}
-                      isAdmin={isAdmin}
-                      canEditSecretaria={canEditSecretaria}
-                      updatingUserId={updatingUserId}
-                      deletingUserId={deletingUserId}
-                      onRoleChange={handleRoleChange}
-                      onSecretariaChange={handleSecretariaChange}
-                      onDeleteUser={handleDeleteUser}
-                      canDeleteUsers={hasPermission(PERMISOS.ELIMINAR_USUARIOS)}
-                    />
-
-                    <PaginationControls
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={users.length}
-                      itemsPerPage={USERS_PER_PAGE}
-                      onPageChange={handlePageChange}
-                    />
-                  </>
-                )}
-              </>
-            )}
-
-            {isAddUserByCurpOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
-                  <div className="bg-[#0076aa] text-white px-6 py-4 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold">Añadir usuario por CURP</h2>
-                      <p className="text-sm text-white/90">Consulta la CUS y registra en el sistema</p>
-                    </div>
-                    <button
-                      onClick={closeAddUserByCurpModal}
-                      className="text-white hover:bg-[#005a85] rounded-lg p-2 transition-colors"
-                      aria-label="Cerrar"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="p-6 space-y-4">
-                    {lookupError && (
-                      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        {lookupError}
-                      </div>
-                    )}
-
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Columna izquierda: CURP y búsqueda */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      CURP del solicitante
+                    </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={curpToLookup}
-                        onChange={(e) => setCurpToLookup(e.target.value)}
-                        placeholder="CURP"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 placeholder:!text-gray-500 placeholder:!opacity-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                        disabled={isLookingUpCurp || isCreatingUser}
+                        onChange={(e) => setCurpToLookup(e.target.value.toUpperCase())}
+                        placeholder="Ej: ABCD123456EFGHJK01"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0076aa] focus:border-transparent"
+                        disabled={isLookingUpCurp}
                       />
                       <button
                         onClick={handleLookupCurp}
-                        disabled={isLookingUpCurp || isCreatingUser}
-                        type="button"
-                        className="px-4 py-2 bg-[#0076aa] text-white font-semibold rounded-lg hover:bg-[#005a85] transition-colors disabled:opacity-50 flex items-center gap-2"
+                        disabled={isLookingUpCurp || !curpToLookup.trim()}
+                        className="px-4 py-2 bg-[#0076aa] text-white rounded-lg hover:bg-[#005a85] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shrink-0"
                       >
                         {isLookingUpCurp && (
-                          <svg
-                            className="w-5 h-5 animate-spin"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              d="M4 12a8 8 0 018-8"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              strokeLinecap="round"
-                            />
-                          </svg>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         )}
-                        {isLookingUpCurp ? 'Consultando...' : 'Consultar'}
+                        {isLookingUpCurp ? 'Buscando...' : 'Buscar'}
                       </button>
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">ID General</label>
-                        <input
-                          type="text"
-                          value={newUserIdGeneral}
-                          readOnly
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg 
-               bg-gray-100 text-gray-500 cursor-not-allowed 
-               focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre Completo</label>
-                        <input
-                          type="text"
-                          value={newUserNombre}
-                          readOnly
-                          onChange={(e) => setNewUserNombre(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg 
-               bg-gray-100 text-gray-500 cursor-not-allowed 
-               focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                          disabled={isCreatingUser}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Asignar Secretaría</label>
-                        <select
-                          value={newUserSecretaria}
-                          onChange={(e) => setNewUserSecretaria(e.target.value)}
-                          className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-sm text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isCreatingUser}
-                        >
-                          <option value="" disabled>Selecciona una secretaría</option>
-                          {secretarias.map((secretaria) => (
-                            <option
-                              key={secretaria.id_secretaria}
-                              value={secretaria.nombre_secretaria}
-                            >
-                              {secretaria.nombre_secretaria}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Asignar Rol</label>
-                        <select
-                          value={newUserRolId ?? ''}
-                          onChange={(e) => setNewUserRolId(e.target.value ? parseInt(e.target.value) : null)}
-                          className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0076aa] text-sm text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isCreatingUser}
-                        >
-                          <option value="" disabled>Selecciona un rol</option>
-                          {roles.map((role) => (
-                            <option key={role.id_roles} value={role.id_roles}>
-                              {role.rol}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                  {lookupError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                      <p className="font-medium">{lookupError}</p>
+                    </div>
+                  )}
+
+                  {newUserIdGeneral && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                      <p className="font-medium">✅ Usuario encontrado: </p>
+                      <p>{newUserNombre}</p>
+                      <p className="text-sm mt-1">ID General: {newUserIdGeneral}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Columna derecha: Formulario de registro */}
+                {newUserIdGeneral && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Rol del usuario
+                      </label>
+                      <select
+                        value={newUserRolId || ''}
+                        onChange={(e) => setNewUserRolId(Number(e.target.value))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0076aa] focus:border-transparent"
+                      >
+                        <option value="">Selecciona un rol</option>
+                        {roles.map((role) => (
+                          <option key={role.id_roles} value={role.id_roles}>
+                            {role.rol}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    {/* {lookupRawData && (
-                      <details className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                        <summary className="cursor-pointer text-sm font-semibold text-gray-700">Ver respuesta del CUS</summary>
-                        <pre className="mt-2 text-xs text-gray-700 overflow-auto max-h-60">{JSON.stringify(lookupRawData, null, 2)}</pre>
-                      </details>
-                    )} */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Secretaría
+                      </label>
+                      <select
+                        value={newUserSecretaria}
+                        onChange={(e) => {
+                          setNewUserSecretaria(e.target.value);
+                          setNewUserDependencia('');
+                        }}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0076aa] focus:border-transparent"
+                      >
+                        <option value="">Selecciona una secretaría</option>
+                        {secretarias.map((secretaria) => (
+                          <option key={secretaria.id_secretaria} value={secretaria.nombre_secretaria}>
+                            {secretaria.nombre_secretaria}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                    <div className="flex gap-3 justify-end pt-2">
-                      {/* <button
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Dependencia
+                      </label>
+                      <select
+                        value={newUserDependencia}
+                        onChange={(e) => setNewUserDependencia(e.target.value)}
+                        disabled={!newUserSecretaria || loadingNewUserDependencias}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0076aa] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="">
+                          {!newUserSecretaria
+                            ? 'Selecciona primero una secretaría'
+                            : loadingNewUserDependencias
+                              ? 'Cargando dependencias...'
+                              : 'Selecciona una dependencia'}
+                        </option>
+                        {newUserDependencias.map((dependencia) => (
+                          <option
+                            key={dependencia.id_dependencia ?? dependencia.nombre_dependencia}
+                            value={dependencia.nombre_dependencia}
+                          >
+                            {dependencia.nombre_dependencia}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
                         onClick={closeAddUserByCurpModal}
-                        disabled={isCreatingUser || isLookingUpCurp}
-                        className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         Cancelar
-                      </button> */}
+                      </button>
                       <button
                         onClick={handleCreateUserFromCurp}
-                        disabled={isCreatingUser || isLookingUpCurp}
-                        className="px-4 py-2 bg-[#00ae6f] text-white font-semibold rounded-lg hover:bg-[#408740] transition-colors disabled:opacity-50"
+                        disabled={isCreatingUser || !newUserRolId || !newUserSecretaria}
+                        className="flex-1 px-4 py-2 bg-[#0076aa] text-white rounded-lg hover:bg-[#005a85] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                       >
-                        {isCreatingUser ? 'Guardando...' : 'Agregar usuario'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {alertModal.isOpen && (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-opacity-50 backdrop-blur-sm">
-                <div
-                  className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 ease-out ${
-                    alertVisible
-                      ? "opacity-100 scale-100 translate-y-0"
-                      : "opacity-0 scale-95 translate-y-2"
-                  }`}
-                >
-                  <div className="p-6">
-                    <div className="flex items-center mb-4">
-                      <div
-                        className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-                          alertModal.type === 'success'
-                            ? 'bg-green-100'
-                            : alertModal.type === 'error'
-                              ? 'bg-red-100'
-                              : 'bg-blue-100'
-                        }`}
-                      >
-                        {alertModal.type === 'success' ? (
-                          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                          </svg>
-                        ) : alertModal.type === 'error' ? (
-                          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        ) : (
-                          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0 1 18 0z" />
-                          </svg>
+                        {isCreatingUser && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         )}
-                      </div>
-                      <div>
-                        <h3
-                          className={`text-lg font-semibold ${
-                            alertModal.type === 'success'
-                              ? 'text-green-800'
-                              : alertModal.type === 'error'
-                                ? 'text-red-800'
-                                : 'text-blue-800'
-                          }`}
-                        >
-                          {alertModal.type === 'success'
-                            ? 'Éxito'
-                            : alertModal.type === 'error'
-                              ? 'Error'
-                              : 'Información'}
-                        </h3>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 mb-6">{alertModal.message}</p>
-                    <button
-                      onClick={closeAlert}
-                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                        alertModal.type === 'success'
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : alertModal.type === 'error'
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }`}
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {confirmModal.isOpen && (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-opacity-50 backdrop-blur-sm">
-                <div
-                  className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 ease-out ${
-                    confirmVisible
-                      ? "opacity-100 scale-100 translate-y-0"
-                      : "opacity-0 scale-95 translate-y-2"
-                  }`}
-                >
-                  <div className="p-6">
-                    <div className="flex items-center mb-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800">Confirmar Acción</h3>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 mb-6">{confirmModal.message}</p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={closeConfirm}
-                        className="flex-1 px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={() => {
-                          confirmModal.onConfirm();
-                          closeConfirm();
-                        }}
-                        className="flex-1 px-4 py-2 bg-[#0076aa] text-white font-medium rounded-lg hover:bg-[#005a85] transition-colors"
-                      >
-                        Confirmar
+                        {isCreatingUser ? 'Creando usuario...' : 'Crear usuario'}
                       </button>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Contenido de la pestaña Roles y Permisos */}
-            {activeTab === 'roles' && (
-              <div className="relative overflow-x-auto bg-[#f4f7fb] shadow-xs rounded-base border border-default">
-                <table className="w-full text-sm text-left rtl:text-right text-body">
-                  <thead className="text-sm bg-[#0b3b60] text-white border-b rounded-base border-default">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 font-medium">ID</th>
-                      <th scope="col" className="px-6 py-3 font-medium">Nombre del Rol</th>
-                      <th scope="col" className="px-6 py-3 font-medium">Permisos Asignados</th>
-                      <th scope="col" className="px-6 py-3 font-medium">Tipo</th>
-                      <th scope="col" className="px-6 py-3 font-medium">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loadingPermisos ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-8">
-                          <RolesSkeleton />
-                        </td>
-                      </tr>
-                    ) : rolesConPermisos.length === 0 ? (
-                      <tr className="bg-[#f4f7fb] border-b border-default">
-                        <td colSpan={5} className="px-6 py-4 text-center">
-                          No hay roles disponibles
-                        </td>
-                      </tr>
-                    ) : (
-                      rolesConPermisos.map((rol) => (
-                        <React.Fragment key={rol.id_rol}>
-                          <tr
-                            className="bg-[#f4f7fb] border-b border-default hover:bg-[#e9f0f8] transition-colors"
-                          >
-                            <th scope="row" className="px-6 py-4 font-medium text-heading whitespace-nowrap">
-                              {rol.id_rol}
-                            </th>
-                            <td className="px-6 py-4">
-                              <div className="font-semibold text-gray-900">{rol.nombre_rol}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="px-2 py-1 bg-[#0076aa] text-white rounded text-xs font-semibold">
-                                {rol.permisos.length} permisos
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${getRolBadgeColor(rol.id_rol)}`}>
-                                {getRolBadgeLabel(rol.id_rol)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => setSelectedRol(selectedRol === rol.id_rol ? null : rol.id_rol)}
-                                className="px-3 py-1 bg-[#0076aa] text-white rounded text-sm font-medium hover:bg-[#005a85] transition-colors flex items-center gap-2"
-                              >
-                                <svg
-                                  className={`w-4 h-4 transition-transform ${selectedRol === rol.id_rol ? 'rotate-180' : ''}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                                {selectedRol === rol.id_rol ? 'Ocultar' : 'Gestionar'} Permisos
-                              </button>
-                            </td>
-                          </tr>
-                          
-                          {/* Fila expandida con permisos */}
-                          {selectedRol === rol.id_rol && (
-                            <tr className="bg-[#e9f0f8]">
-                              <td colSpan={5} className="px-6 py-4">
-                                <div className="space-y-4">
-                                  <div className="flex items-center gap-2 mb-4">
-                                    <svg className="w-5 h-5 text-[#0076aa]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0 1 18 0z" />
-                                    </svg>
-                                    <p className="text-sm text-gray-600 font-medium">
-                                      Activa o desactiva los permisos para el rol: <span className="font-bold text-[#0076aa]">{rol.nombre_rol}</span>
-                                    </p>
-                                  </div>
-                                  
-                                  {Object.entries(getPermisosPorCategoria()).map(([categoria, permisos]) => (
-                                    permisos.length > 0 && (
-                                      <div key={categoria} className="bg-white rounded-lg p-4 border border-gray-200">
-                                        <h4 className="font-semibold text-[#0b3b60] mb-3 text-sm uppercase tracking-wide border-b border-gray-200 pb-2">
-                                          {categoria}
-                                        </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                          {permisos.map((permiso) => {
-                                            const tienePermiso = rol.permisos.includes(permiso);
-                                            const isUpdating = updatingPermiso === permiso;
-                                            
-                                            return (
-                                              <label
-                                                key={permiso}
-                                                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                                  tienePermiso
-                                                    ? 'bg-green-50 border-green-300 hover:bg-green-100'
-                                                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                                                } ${isUpdating ? 'opacity-50' : ''}`}
-                                              >
-                                                <input
-                                                  type="checkbox"
-                                                  checked={tienePermiso}
-                                                  onChange={() => handleTogglePermiso(rol.id_rol, permiso, tienePermiso)}
-                                                  disabled={isUpdating}
-                                                  className="w-4 h-4 text-[#0076aa] rounded focus:ring-[#0076aa] focus:ring-2"
-                                                />
-                                                <span className="text-sm text-gray-700 font-medium">
-                                                  {permiso.replace(/_/g, ' ')}
-                                                </span>
-                                                {isUpdating && (
-                                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0076aa] ml-auto"></div>
-                                                )}
-                                              </label>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    )
-                                  ))}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-      </div>
+      {/* Alert Modal */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+            <div className={`flex items-center gap-3 mb-4 ${
+              alertModal.type === 'success' ? 'text-green-600' :
+              alertModal.type === 'error' ? 'text-red-600' : 'text-blue-600'
+            }`}>
+              {alertModal.type === 'success' && (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {alertModal.type === 'error' && (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {alertModal.type === 'info' && (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <p className={`font-medium ${
+                alertModal.type === 'success' ? 'text-green-900' :
+                alertModal.type === 'error' ? 'text-red-900' : 'text-blue-900'
+              }`}>
+                {alertModal.message}
+              </p>
+            </div>
+            <button
+              onClick={closeAlert}
+              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4 text-amber-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="font-medium text-amber-900">{confirmModal.message}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={closeConfirm}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  closeConfirm();
+                }}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

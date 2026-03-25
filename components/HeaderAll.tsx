@@ -116,22 +116,19 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
         </svg>
       ),
     },
-    // {
-    //   href: '/prestamo',
-    //   label: 'Documentos en Préstamo',
-    //   icon: (
-    //     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 32 32">
-    //       <polygon points="17,1 6,6.6 6,9 28,9 28,6.6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <path d="M3,25l2.6-4.2c1.5-2.3,4-3.8,6.8-3.8H19v0c0,2.2-1.8,4-4,4h-2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <path d="M15,21h8l1.2-1.6c1.1-1.5,2.9-2.4,4.8-2.4h0l-2.7,4.8c-1.4,2.6-4.2,4.2-7.1,4.2h0c-4.7,0-9.3,1.4-13.2,4l0,0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <line x1="17" y1="9" x2="17" y2="17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <line x1="21" y1="9" x2="21" y2="21" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <line x1="25" y1="9" x2="25" y2="18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <line x1="9" y1="9" x2="9" y2="17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //       <line x1="13" y1="9" x2="13" y2="17" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10"/>
-    //     </svg>
-    //   ),
-    // },
+    {
+      href: '/prestamo',
+      label: 'Documentos en Préstamo',
+      icon: (
+        <img
+          src="/hand-hold-white.svg"
+          alt="Icono de préstamos"
+          className="w-5 h-5"
+          width={20}
+          height={20}
+        />
+      ),
+    },
     {
       href: '/secretarias',
       label: 'Secretarías',
@@ -159,7 +156,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
     <>
       {/* Menú lateral */}
       <div
-        className={`fixed top-0 left-0 h-full w-72 bg-[#0076aa] shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 left-0 h-full w-72 bg-[#0076aa] shadow-2xl z-60 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         <div className="flex flex-col flex-center h-full">
@@ -224,7 +221,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                       viewBox="0 0 24 24"
                       strokeWidth="1.5"
                       stroke="currentColor"
-                      className="w-7 h-7 text-white flex-shrink-0"
+                      className="w-7 h-7 text-white shrink-0"
                     >
                       <path
                         strokeLinecap="round"
@@ -300,7 +297,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       {/* Overlay */}
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-[55]"
+          className="fixed inset-0 bg-black/30 z-55"
           onClick={() => setIsMenuOpen(false)}
         />
       )}
@@ -314,7 +311,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
             {showMenuButton && (
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors flex-shrink-0"
+                className="text-white p-2 hover:bg-[#005a85] rounded-lg transition-colors shrink-0"
                 aria-label="Menú"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,24 +320,10 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </button>
             )}
 
-            {/* Botón Volver
-            {!showMenuButton && showBackButton && (
-              <Link
-                href={backHref}
-                className="flex items-center gap-2 text-white px-3 py-2 rounded-md hover:bg-[#005a85] transition-colors duration-200 flex-shrink-0"
-                aria-label={backText}
-              >
-                <span className="text-lg"><Image src="/volver-flecha.png" alt="Arrow Left" width={25} height={25} /></span>
-                <span className="font-medium text-sm sm:text-base">{backText}</span>
-              </Link>
-            )} */}
-
-
-
             {/* Logo + Título */}
             <div className="flex items-center justify-center gap-3 flex-1 min-w-0">
               {showLogo && (
-                <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center shrink-0">
                   <Image
                     src="/logo_2.png"
                     alt="Logo del Sistema"
@@ -364,7 +347,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               </div>
             </div>
 
-            <div className="w-16 flex-shrink-0 flex justify-end" data-profile-menu="container">
+            <div className="w-16 shrink-0 flex justify-end" data-profile-menu="container">
               <div className="relative">
                 <button
                   type="button"
@@ -374,44 +357,16 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                   aria-haspopup="menu"
                   aria-expanded={isProfileMenuOpen}
                 >
-                  {/* <Image
-                    src="/icons/user-circle.svg"
-                    alt='User'
-                    width={20}
-                    height={20}
-                    className='w-8 h-8'
-                  /> */}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-9.5 h-9.5"
-                  >
-                    <circle
-                      opacity="0.5"
-                      cx="12"
-                      cy="9"
-                      r="3"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-
-                    <path
-                      opacity="0.5"
-                      d="M17.9691 20C17.81 17.1085 16.9247 15 11.9999 15C7.07521 15 6.18991 17.1085 6.03076 20"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  <div className="w-10 h-10 flex items-center justify-center bg-white/20 rounded-full font-semibold text-sm border-2 border-gray-100">
+                    {userName 
+                      ? userName
+                          .split(' ')
+                          .slice(0, 2)
+                          .map(n => n[0])
+                          .join('')
+                          .toUpperCase()
+                      : '?'}
+                  </div>
                 </button>
 
                 {isProfileMenuOpen && (
@@ -420,14 +375,14 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
                     role="menu"
                   >
                     {(userName || roleName) && (
-                      <div className="px-4 py-3 border-b border-black/10">
+                      <div className="px-4 py-4 border-b border-black/10">
                         {userName && (
-                          <p className="text-sm font-semibold text-[#0b3b60] whitespace-normal break-words">
+                          <p className="text-sm font-semibold text-[#0b3b60] whitespace-normal wrap-break-word">
                             {userName}
                           </p>
                         )}
                         {roleName && (
-                          <p className="text-xs text-black/60 whitespace-normal break-words">
+                          <p className="text-xs text-black/60 whitespace-normal wrap-break-word">
                             {roleName}
                           </p>
                         )}

@@ -1,5 +1,5 @@
 // Archivo para la conexión a PostgreSQL
-import { Pool, type PoolConfig } from 'pg';
+import { Pool, PoolClient, type PoolConfig } from 'pg';
 
 // Validar que las variables de entorno estén definidas
 const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
@@ -156,7 +156,7 @@ export async function getUserByCurp(curp: string) {
   
   try {
     const result = await client.query(
-      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre 
+      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre, nom_dependencia
        FROM usuarios 
        WHERE curp = $1`,
       [curp.toUpperCase()]
@@ -182,7 +182,7 @@ export async function getUserById(idUsuarios: number) {
   
   try {
     const result = await client.query(
-      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre 
+      `SELECT id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre, nom_dependencia
        FROM usuarios 
        WHERE id_usuarios = $1`,
       [idUsuarios]
@@ -208,6 +208,7 @@ export async function createUserIfNotExists(userData: {
   id_rol?: number;
   nombre_usuario?: string;
   nom_secre?: string | null;
+  nom_dependencia?: string | null;
 }) {
   try {
     const pool = getPool();
@@ -242,6 +243,15 @@ export async function createUserIfNotExists(userData: {
         values.push(userData.nom_secre);
         paramIndex++;
       }
+
+      if (
+        userData.nom_dependencia !== undefined &&
+        existingUser.nom_dependencia !== userData.nom_dependencia
+      ) {
+        updates.push(`nom_dependencia = $${paramIndex}`);
+        values.push(userData.nom_dependencia);
+        paramIndex++;
+      }
       
       if (updates.length > 0) {
         values.push(curpUpper);
@@ -254,6 +264,10 @@ export async function createUserIfNotExists(userData: {
           id_general: userData.id_general, 
           nombre_usuario: userData.nombre_usuario || existingUser.nombre_usuario,
           nom_secre: userData.nom_secre !== undefined ? userData.nom_secre : existingUser.nom_secre,
+          nom_dependencia:
+            userData.nom_dependencia !== undefined
+              ? userData.nom_dependencia
+              : existingUser.nom_dependencia,
         };
       }
       return existingUser;
@@ -261,15 +275,16 @@ export async function createUserIfNotExists(userData: {
     
     // Si no existe, crear nuevo usuario
     const result = await pool.query(
-      `INSERT INTO usuarios (curp, id_general, id_rol, nombre_usuario, nom_secre)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre`,
+      `INSERT INTO usuarios (curp, id_general, id_rol, nombre_usuario, nom_secre, nom_dependencia)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id_usuarios, id_general, curp, id_rol, nombre_usuario, nom_secre, nom_dependencia`,
       [
         curpUpper,
         userData.id_general,
         idRol,
         userData.nombre_usuario || null,
         userData.nom_secre || null,
+        userData.nom_dependencia || null,
       ]
     );
     
@@ -867,6 +882,7 @@ export async function getTiposDocumento() {
 // Función para obtener todos los documentos con JOINs
 export async function getDocumentos(filters?: {
   id_secre?: number;
+  id_dep?: number;
   tipo_doc?: number;
   fecha_doc?: string;
   estatus_doc?: string;
@@ -925,6 +941,12 @@ export async function getDocumentos(filters?: {
     if (filters?.id_secre) {
       query += ` AND d.id_secre = $${paramIndex}`;
       params.push(filters.id_secre);
+      paramIndex++;
+    }
+
+    if (filters?.id_dep) {
+      query += ` AND d.id_dep = $${paramIndex}`;
+      params.push(filters.id_dep);
       paramIndex++;
     }
 
@@ -1205,6 +1227,345 @@ export async function getStatistics() {
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
     throw error;
+  }
+}
+
+type PrestamoFilters = {
+  id_doc?: number;
+  id_secre?: number;
+  estatus_prestamo?: string;
+};
+
+type CreatePrestamoInput = {
+  id_doc: number;
+  nombre_solicitante: string;
+  curp_solicitante: string;
+  area_solicitante?: string;
+  motivo_prestamo?: string;
+  observaciones?: string;
+  fecha_prestamo?: string;
+  fecha_limite_devolucion: string;
+  vale_url?: string;
+  id_usuario_registro: number;
+};
+
+type DevolverPrestamoInput = {
+  id_prestamo: number;
+  fecha_devolucion: string;
+  observaciones_devolucion?: string;
+  id_usuario_devolucion: number;
+};
+
+type Queryable = Pool | PoolClient;
+
+async function syncOverduePrestamos(db: Queryable) {
+  await db.query(
+    `UPDATE prestamos_documentos
+     SET estatus_prestamo = 'Vencido'
+     WHERE estatus_prestamo = 'Prestado'
+       AND fecha_limite_devolucion < CURRENT_DATE`
+  );
+}
+
+export async function getPrestamos(filters?: PrestamoFilters) {
+  try {
+    const pool = getPool();
+    await syncOverduePrestamos(pool);
+
+    const dependencyTable = await resolveDependenciasTable(pool);
+    const dependencySelect = dependencyTable
+      ? `dep.${dependencyTable.nombreColumn} AS nombre_dependencia,`
+      : `NULL AS nombre_dependencia,`;
+    const dependencyJoin = dependencyTable
+      ? `LEFT JOIN ${dependencyTable.tableName} dep ON d.id_dep = dep.id_dependencia`
+      : '';
+
+    let query = `SELECT
+        p.id_prestamo,
+        p.id_doc,
+        d.nombre_doc,
+        d.expediente_doc,
+        d.oficio_doc,
+        d.id_secre,
+        s.nombre_secretaria,
+        ${dependencySelect}
+        d.num_caja,
+        d.ubicacion_doc,
+        d.estante_doc,
+        p.nombre_solicitante,
+        p.curp_solicitante,
+        p.area_solicitante,
+        p.motivo_prestamo,
+        p.observaciones,
+        p.fecha_prestamo,
+        p.fecha_limite_devolucion,
+        p.fecha_devolucion,
+        p.estatus_prestamo,
+        p.vale_url,
+        p.id_usuario_registro,
+        p.id_usuario_devolucion,
+        p.created_at,
+        p.updated_at,
+        ur.nombre_usuario AS nombre_usuario_registro,
+        ud.nombre_usuario AS nombre_usuario_devolucion
+      FROM prestamos_documentos p
+      INNER JOIN documentos d ON p.id_doc = d.id_doc
+      LEFT JOIN secretarias s ON d.id_secre = s.id_secretaria
+      ${dependencyJoin}
+      LEFT JOIN usuarios ur ON p.id_usuario_registro = ur.id_usuarios
+      LEFT JOIN usuarios ud ON p.id_usuario_devolucion = ud.id_usuarios
+      WHERE 1=1`;
+
+    const params: Array<number | string> = [];
+    let paramIndex = 1;
+
+    if (filters?.id_doc) {
+      query += ` AND p.id_doc = $${paramIndex}`;
+      params.push(filters.id_doc);
+      paramIndex++;
+    }
+
+    if (filters?.id_secre) {
+      query += ` AND d.id_secre = $${paramIndex}`;
+      params.push(filters.id_secre);
+      paramIndex++;
+    }
+
+    if (filters?.estatus_prestamo) {
+      query += ` AND p.estatus_prestamo = $${paramIndex}`;
+      params.push(filters.estatus_prestamo);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY
+      CASE
+        WHEN p.estatus_prestamo IN ('Prestado', 'Vencido') THEN 0
+        ELSE 1
+      END,
+      p.fecha_prestamo DESC,
+      p.id_prestamo DESC`;
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('Error al obtener prestamos:', error);
+    throw error;
+  }
+}
+
+export async function getPrestamoById(idPrestamo: number) {
+  try {
+    const pool = getPool();
+    await syncOverduePrestamos(pool);
+
+    const dependencyTable = await resolveDependenciasTable(pool);
+    const dependencySelect = dependencyTable
+      ? `dep.${dependencyTable.nombreColumn} AS nombre_dependencia,`
+      : `NULL AS nombre_dependencia,`;
+    const dependencyJoin = dependencyTable
+      ? `LEFT JOIN ${dependencyTable.tableName} dep ON d.id_dep = dep.id_dependencia`
+      : '';
+
+    const result = await pool.query(
+      `SELECT
+        p.id_prestamo,
+        p.id_doc,
+        d.nombre_doc,
+        d.expediente_doc,
+        d.oficio_doc,
+        d.id_secre,
+        s.nombre_secretaria,
+        ${dependencySelect}
+        d.num_caja,
+        d.ubicacion_doc,
+        d.estante_doc,
+        p.nombre_solicitante,
+        p.curp_solicitante,
+        p.area_solicitante,
+        p.motivo_prestamo,
+        p.observaciones,
+        p.fecha_prestamo,
+        p.fecha_limite_devolucion,
+        p.fecha_devolucion,
+        p.estatus_prestamo,
+        p.vale_url,
+        p.id_usuario_registro,
+        p.id_usuario_devolucion,
+        p.created_at,
+        p.updated_at,
+        ur.nombre_usuario AS nombre_usuario_registro,
+        ud.nombre_usuario AS nombre_usuario_devolucion
+      FROM prestamos_documentos p
+      INNER JOIN documentos d ON p.id_doc = d.id_doc
+      LEFT JOIN secretarias s ON d.id_secre = s.id_secretaria
+      ${dependencyJoin}
+      LEFT JOIN usuarios ur ON p.id_usuario_registro = ur.id_usuarios
+      LEFT JOIN usuarios ud ON p.id_usuario_devolucion = ud.id_usuarios
+      WHERE p.id_prestamo = $1`,
+      [idPrestamo]
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error al obtener prestamo por ID:', error);
+    throw error;
+  }
+}
+
+export async function createPrestamo(prestamoData: CreatePrestamoInput) {
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    if (
+      !prestamoData.id_doc ||
+      !prestamoData.nombre_solicitante?.trim() ||
+      !prestamoData.curp_solicitante?.trim() ||
+      !prestamoData.fecha_limite_devolucion ||
+      !prestamoData.id_usuario_registro
+    ) {
+      throw new Error('Faltan campos obligatorios para crear el prestamo');
+    }
+
+    const curp = prestamoData.curp_solicitante.trim().toUpperCase();
+
+    await client.query('BEGIN');
+    await syncOverduePrestamos(client);
+
+    const documentoResult = await client.query(
+      `SELECT id_doc
+       FROM documentos
+       WHERE id_doc = $1`,
+      [prestamoData.id_doc]
+    );
+
+    if (documentoResult.rows.length === 0) {
+      throw new Error('El documento seleccionado no existe');
+    }
+
+    const activePrestamo = await client.query(
+      `SELECT id_prestamo
+       FROM prestamos_documentos
+       WHERE id_doc = $1
+         AND estatus_prestamo IN ('Prestado', 'Vencido')
+       FOR UPDATE`,
+      [prestamoData.id_doc]
+    );
+
+    if (activePrestamo.rows.length > 0) {
+      throw new Error('El documento ya tiene un prestamo activo');
+    }
+
+    const insertResult = await client.query(
+      `INSERT INTO prestamos_documentos (
+        id_doc,
+        nombre_solicitante,
+        curp_solicitante,
+        area_solicitante,
+        motivo_prestamo,
+        observaciones,
+        fecha_prestamo,
+        fecha_limite_devolucion,
+        estatus_prestamo,
+        vale_url,
+        id_usuario_registro
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, 'Prestado', $9, $10
+      )
+      RETURNING id_prestamo`,
+      [
+        prestamoData.id_doc,
+        prestamoData.nombre_solicitante.trim(),
+        curp,
+        prestamoData.area_solicitante?.trim() || null,
+        prestamoData.motivo_prestamo?.trim() || null,
+        prestamoData.observaciones?.trim() || null,
+        prestamoData.fecha_prestamo || null,
+        prestamoData.fecha_limite_devolucion,
+        prestamoData.vale_url || null,
+        prestamoData.id_usuario_registro,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return getPrestamoById(insertResult.rows[0].id_prestamo);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error al crear prestamo:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function devolverPrestamo(prestamoData: DevolverPrestamoInput) {
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    if (
+      !prestamoData.id_prestamo ||
+      !prestamoData.fecha_devolucion ||
+      !prestamoData.id_usuario_devolucion
+    ) {
+      throw new Error('Faltan datos para registrar la devolucion');
+    }
+
+    await client.query('BEGIN');
+    await syncOverduePrestamos(client);
+
+    const prestamoResult = await client.query(
+      `SELECT id_prestamo, estatus_prestamo, observaciones
+       FROM prestamos_documentos
+       WHERE id_prestamo = $1
+       FOR UPDATE`,
+      [prestamoData.id_prestamo]
+    );
+
+    if (prestamoResult.rows.length === 0) {
+      throw new Error('El prestamo no existe');
+    }
+
+    const prestamoActual = prestamoResult.rows[0];
+    if (prestamoActual.estatus_prestamo === 'Devuelto') {
+      throw new Error('El prestamo ya fue devuelto');
+    }
+
+    if (prestamoActual.estatus_prestamo === 'Cancelado') {
+      throw new Error('El prestamo fue cancelado y no se puede devolver');
+    }
+
+    const observacionesActuales = prestamoActual.observaciones?.trim() || '';
+    const notaDevolucion = prestamoData.observaciones_devolucion?.trim() || '';
+    const observaciones = notaDevolucion
+      ? observacionesActuales
+        ? `${observacionesActuales}\n\nDevolucion (${prestamoData.fecha_devolucion}): ${notaDevolucion}`
+        : `Devolucion (${prestamoData.fecha_devolucion}): ${notaDevolucion}`
+      : observacionesActuales || null;
+
+    await client.query(
+      `UPDATE prestamos_documentos
+       SET fecha_devolucion = $1,
+           estatus_prestamo = 'Devuelto',
+           id_usuario_devolucion = $2,
+           observaciones = $3
+       WHERE id_prestamo = $4`,
+      [
+        prestamoData.fecha_devolucion,
+        prestamoData.id_usuario_devolucion,
+        observaciones,
+        prestamoData.id_prestamo,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return getPrestamoById(prestamoData.id_prestamo);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error al devolver prestamo:', error);
+    throw error;
+  } finally {
+    client.release();
   }
 }
 

@@ -6,4 +6,6 @@ export default {
     extend: {},
   },
   plugins: [],
+  // Add this to maintain compatibility with existing styles
+  prefix: '',
 } satisfies Config;

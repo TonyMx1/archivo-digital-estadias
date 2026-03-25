@@ -9,7 +9,7 @@ export default function AuthLayout({
 }>) {
   return (
     <div className="min-h-screen flex flex-col bg-primary">
-      <SessionTimer sessionTimeout={30} warningTime={5} />
+      <SessionTimer sessionTimeout={25} warningTime={5} />
       <HeaderAll showMenuButton={true} showBackButton={false} />
       
       {/* Contenido principal */}

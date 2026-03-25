@@ -9,6 +9,7 @@ export interface User {
   nombre_rol: string;
   nombre_usuario: string | null;
   nom_secre: string | null;
+  nom_dependencia: string | null;
 }
 
 export interface Role {
@@ -90,6 +91,7 @@ export function useAdminUsers() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         id_usuarios: userId,
         id_rol: newRoleId,
@@ -122,6 +124,7 @@ export function useAdminUsers() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         id_usuarios: userId,
         nom_secre: nomSecre,
@@ -142,6 +145,37 @@ export function useAdminUsers() {
     throw new Error(data.error || 'Error al actualizar la secretaría');
   };
 
+  const updateUserDependencia = async (userId: number, nomDependencia: string) => {
+    if (currentUserRole !== 1 && currentUserRole !== 2) {
+      throw new Error('Solo administradores y superusuarios pueden modificar la dependencia');
+    }
+
+    const response = await fetch('/api/admin/users', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        id_usuarios: userId,
+        nom_dependencia: nomDependencia,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id_usuarios === userId ? { ...user, nom_dependencia: nomDependencia } : user
+        )
+      );
+      return { success: true };
+    }
+
+    throw new Error(data.error || 'Error al actualizar la dependencia');
+  };
+
   return {
     users,
     roles,
@@ -151,6 +185,7 @@ export function useAdminUsers() {
     error,
     updateUserRole,
     updateUserSecretaria,
+    updateUserDependencia,
     isAdmin: currentUserRole === 1,
     canEditSecretaria: currentUserRole === 1 || currentUserRole === 2,
   };

@@ -1,24 +1,28 @@
 @import "tailwindcss";
+@import "flowbite-react/plugin/tailwindcss";
+@source "../.flowbite-react/class-list.json";
 @import "tw-animate-css";
 
+
 @tailwind base;
-@tailwind components;
+/* @tailwind components; */
 @tailwind utilities;
 
 @plugin "flowbite/plugin";
 @source "../node_modules/flowbite";
-
-/* @import "../node_modules/flowbite-datepicker/src/scss/flowbite-datepicker"; */
-
 @import '@skeletonlabs/skeleton'; 
 @import '@skeletonlabs/skeleton-react'; 
 @import '@skeletonlabs/skeleton/themes/cerberus';
+
+@import "flowbite/src/themes/default";
+
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-display: "Roboto Slab", sans-serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -198,21 +202,26 @@
   }
 }
 
-/* Loading state for buttons - excluding pagination buttons completely */
-button:not(.pagination-button):disabled::after {
+/* Loading shimmer only for buttons that explicitly opt-in via class */
+button.loading-shimmer:disabled::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.2), 
-    rgba(255, 255, 255, 0.4), 
-    rgba(255, 255, 255, 0.2), 
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.2),
     transparent
   );
   animation: shimmer 2s infinite;
   transform: translateX(-100%);
+}
+
+/* Optional: preserve existing pagination style if needed */
+button.pagination-button:disabled::after {
+  content: none;
 }
 
 /* Only apply positioning to non-pagination disabled buttons */
@@ -312,4 +321,11 @@ textarea:-ms-input-placeholder {
 input:focus:-ms-input-placeholder,
 textarea:focus:-ms-input-placeholder {
   opacity: 0.5 !important;
+}
+
+#datepicker-autohide > div {
+  bottom: 100% !important;
+  top: auto !important;
+  margin-bottom: 0.5rem !important;
+  margin-top: 0 !important;
 }

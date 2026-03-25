@@ -33,6 +33,7 @@ export interface Documento {
 
 interface DocumentosFilters {
   id_secre?: number;
+  id_dep?: number;
   tipo_doc?: number;
   fecha_doc?: string;
   estatus_doc?: string;
@@ -44,6 +45,7 @@ const pendingDocumentosRequests = new Map<string, Promise<Documento[]>>();
 function buildDocumentosCacheKey(filters?: DocumentosFilters) {
   return JSON.stringify({
     id_secre: filters?.id_secre ?? null,
+    id_dep: filters?.id_dep ?? null,
     tipo_doc: filters?.tipo_doc ?? null,
     fecha_doc: filters?.fecha_doc ?? null,
     estatus_doc: filters?.estatus_doc ?? null,
@@ -78,6 +80,7 @@ export function useDocumentos() {
         const request = (async () => {
           const params = new URLSearchParams();
           if (filters?.id_secre) params.append('id_secre', filters.id_secre.toString());
+          if (filters?.id_dep) params.append('id_dep', filters.id_dep.toString());
           if (filters?.tipo_doc) params.append('tipo_doc', filters.tipo_doc.toString());
           if (filters?.fecha_doc) params.append('fecha_doc', filters.fecha_doc);
           if (filters?.estatus_doc) params.append('estatus_doc', filters.estatus_doc);

@@ -41,6 +41,7 @@ export async function GET() {
         u.id_rol,
         u.nombre_usuario,
         u.nom_secre,
+        u.nom_dependencia,
         r.rol as nombre_rol
       FROM usuarios u
       LEFT JOIN roles r ON u.id_rol = r.id_roles
@@ -105,6 +106,9 @@ export async function POST(request: NextRequest) {
     const nombre_usuario = body?.nombre_usuario ? String(body.nombre_usuario).trim() : undefined;
     const id_rol = body?.id_rol ? Number(body.id_rol) : undefined;
     const nom_secre = body?.nom_secre ? String(body.nom_secre).trim() : undefined;
+    const nom_dependencia = body?.nom_dependencia
+      ? String(body.nom_dependencia).trim()
+      : undefined;
 
     if (!curp || !id_general) {
       return NextResponse.json(
@@ -160,6 +164,7 @@ export async function POST(request: NextRequest) {
       id_rol,
       nombre_usuario,
       nom_secre,
+      nom_dependencia,
     });
 
     if (!user) {
@@ -215,13 +220,18 @@ export async function PUT(request: NextRequest) {
     const { id_usuarios } = body;
     const hasRoleChange = body?.id_rol !== undefined;
     const hasSecretariaChange = Object.prototype.hasOwnProperty.call(body, 'nom_secre');
+    const hasDependenciaChange = Object.prototype.hasOwnProperty.call(body, 'nom_dependencia');
     const id_rol = hasRoleChange ? Number(body.id_rol) : undefined;
     const nom_secre =
       !hasSecretariaChange || body.nom_secre === null || body.nom_secre === ''
         ? null
         : String(body.nom_secre).trim();
+    const nom_dependencia =
+      !hasDependenciaChange || body.nom_dependencia === null || body.nom_dependencia === ''
+        ? null
+        : String(body.nom_dependencia).trim();
 
-    if (!id_usuarios || (!hasRoleChange && !hasSecretariaChange)) {
+    if (!id_usuarios || (!hasRoleChange && !hasSecretariaChange && !hasDependenciaChange)) {
       return NextResponse.json(
         { error: 'Se requiere id_usuarios y al menos un cambio a guardar' },
         { status: 400 }
@@ -275,6 +285,13 @@ export async function PUT(request: NextRequest) {
 
       updates.push(`nom_secre = $${paramIndex}`);
       values.push(nom_secre);
+      paramIndex++;
+    }
+
+    if (hasDependenciaChange) {
+      // Permitir actualizar dependencia, incluido a vacío
+      updates.push(`nom_dependencia = $${paramIndex}`);
+      values.push(nom_dependencia || null);
       paramIndex++;
     }
 

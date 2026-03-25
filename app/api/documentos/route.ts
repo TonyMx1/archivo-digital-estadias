@@ -9,6 +9,7 @@ import {
   updateDocumento,
 } from "@/lib/db";
 import {
+  canAccessDocumentDependencia,
   canAccessDocumentSecretaria,
   DocumentScopeError,
   getDocumentScopeForUser,
@@ -17,6 +18,15 @@ import { PERMISOS } from "@/lib/permisos";
 
 function parsePositiveInt(value: string | null) {
   if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseBodyDependenciaId(value: unknown) {
+  if (value === undefined || value === null || value === "") {
     return null;
   }
 
@@ -39,6 +49,40 @@ function handleScopedError(error: unknown, fallbackMessage: string) {
   );
 }
 
+function canAccessScopedDocumento(
+  idRol: number,
+  scope: Awaited<ReturnType<typeof getDocumentScopeForUser>>,
+  documento: { id_secre?: number | null; id_dep?: number | null }
+) {
+  const canAccessSecretaria = canAccessDocumentSecretaria(
+    idRol,
+    documento.id_secre,
+    scope.allowedSecretariaId
+  );
+
+  if (!canAccessSecretaria) {
+    return {
+      ok: false as const,
+      error: "No puedes acceder a documentos de otra secretaria",
+    };
+  }
+
+  const canAccessDependencia = canAccessDocumentDependencia(
+    idRol,
+    documento.id_dep,
+    scope.allowedDependenciaId
+  );
+
+  if (!canAccessDependencia) {
+    return {
+      ok: false as const,
+      error: "No puedes acceder a documentos de otra dependencia",
+    };
+  }
+
+  return { ok: true as const };
+}
+
 // Obtener documentos (con filtros opcionales)
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +95,7 @@ export async function GET(request: NextRequest) {
     const payload = await verifyToken(token);
 
     if (!payload) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+      return NextResponse.json({ error: "Token invalido" }, { status: 401 });
     }
 
     const canView = await hasPermission(payload.id_rol, PERMISOS.VER_DOCUMENTOS);
@@ -65,21 +109,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const idDoc = parsePositiveInt(searchParams.get("id_doc"));
     const requestedSecretariaId = parsePositiveInt(searchParams.get("id_secre"));
+    const requestedDependenciaId = parsePositiveInt(searchParams.get("id_dep"));
     const tipoDoc = parsePositiveInt(searchParams.get("tipo_doc"));
     const fechaDoc = searchParams.get("fecha_doc");
     const estatusDoc = searchParams.get("estatus_doc");
     const scope = await getDocumentScopeForUser(payload.id_usuarios, payload.id_rol);
 
     if (searchParams.get("id_doc") && !idDoc) {
-      return NextResponse.json({ error: "id_doc inválido" }, { status: 400 });
+      return NextResponse.json({ error: "id_doc invalido" }, { status: 400 });
     }
 
     if (searchParams.get("id_secre") && !requestedSecretariaId) {
-      return NextResponse.json({ error: "id_secre inválido" }, { status: 400 });
+      return NextResponse.json({ error: "id_secre invalido" }, { status: 400 });
+    }
+
+    if (searchParams.get("id_dep") && !requestedDependenciaId) {
+      return NextResponse.json({ error: "id_dep invalido" }, { status: 400 });
     }
 
     if (searchParams.get("tipo_doc") && !tipoDoc) {
-      return NextResponse.json({ error: "tipo_doc inválido" }, { status: 400 });
+      return NextResponse.json({ error: "tipo_doc invalido" }, { status: 400 });
     }
 
     if (idDoc) {
@@ -92,18 +141,11 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      if (
-        scope.restricted &&
-        !canAccessDocumentSecretaria(
-          payload.id_rol,
-          documento.id_secre,
-          scope.allowedSecretariaId
-        )
-      ) {
-        return NextResponse.json(
-          { error: "No puedes acceder a documentos de otra secretaría" },
-          { status: 403 }
-        );
+      if (scope.restricted) {
+        const accessCheck = canAccessScopedDocumento(payload.id_rol, scope, documento);
+        if (!accessCheck.ok) {
+          return NextResponse.json({ error: accessCheck.error }, { status: 403 });
+        }
       }
 
       return NextResponse.json({
@@ -114,6 +156,7 @@ export async function GET(request: NextRequest) {
 
     const filters: {
       id_secre?: number;
+      id_dep?: number;
       tipo_doc?: number;
       fecha_doc?: string;
       estatus_doc?: string;
@@ -125,14 +168,36 @@ export async function GET(request: NextRequest) {
         requestedSecretariaId !== scope.allowedSecretariaId
       ) {
         return NextResponse.json(
-          { error: "Solo puedes consultar documentos de tu secretaría asignada" },
+          { error: "Solo puedes consultar documentos de tu secretaria asignada" },
           { status: 403 }
         );
       }
 
       filters.id_secre = scope.allowedSecretariaId;
-    } else if (requestedSecretariaId) {
-      filters.id_secre = requestedSecretariaId;
+
+      if (scope.allowedDependenciaId) {
+        if (
+          requestedDependenciaId &&
+          requestedDependenciaId !== scope.allowedDependenciaId
+        ) {
+          return NextResponse.json(
+            { error: "Solo puedes consultar documentos de tu dependencia asignada" },
+            { status: 403 }
+          );
+        }
+
+        filters.id_dep = scope.allowedDependenciaId;
+      } else if (requestedDependenciaId) {
+        filters.id_dep = requestedDependenciaId;
+      }
+    } else {
+      if (requestedSecretariaId) {
+        filters.id_secre = requestedSecretariaId;
+      }
+
+      if (requestedDependenciaId) {
+        filters.id_dep = requestedDependenciaId;
+      }
     }
 
     if (tipoDoc) {
@@ -168,7 +233,7 @@ export async function POST(request: NextRequest) {
     const payload = await verifyToken(token);
 
     if (!payload) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+      return NextResponse.json({ error: "Token invalido" }, { status: 401 });
     }
 
     if (payload.id_rol === 10) {
@@ -208,6 +273,9 @@ export async function POST(request: NextRequest) {
 
     const secretariaId = Number(id_secre);
     const tipoDocumentoId = Number(tipo_doc);
+    const parsedDependenciaId = parseBodyDependenciaId(id_dep);
+    const dependenciaWasProvided =
+      id_dep !== undefined && id_dep !== null && id_dep !== "";
     const scope = await getDocumentScopeForUser(payload.id_usuarios, payload.id_rol);
 
     if (!nombre_doc || !tipoDocumentoId || !secretariaId) {
@@ -217,15 +285,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const shouldForceAssignedDependencia =
+      scope.restricted && Boolean(scope.allowedDependenciaId);
+
     if (
-      scope.restricted &&
-      secretariaId !== scope.allowedSecretariaId
+      dependenciaWasProvided &&
+      !parsedDependenciaId &&
+      !shouldForceAssignedDependencia
     ) {
+      return NextResponse.json({ error: "id_dep invalido" }, { status: 400 });
+    }
+
+    if (scope.restricted && secretariaId !== scope.allowedSecretariaId) {
       return NextResponse.json(
-        { error: "Solo puedes crear documentos dentro de tu secretaría asignada" },
+        { error: "Solo puedes crear documentos dentro de tu secretaria asignada" },
         { status: 403 }
       );
     }
+
+    if (
+      scope.restricted &&
+      scope.allowedDependenciaId &&
+      parsedDependenciaId &&
+      parsedDependenciaId !== scope.allowedDependenciaId
+    ) {
+      return NextResponse.json(
+        { error: "Solo puedes crear documentos dentro de tu dependencia asignada" },
+        { status: 403 }
+      );
+    }
+
+    if (
+      scope.restricted &&
+      scope.allowedDependenciaId &&
+      dependenciaWasProvided &&
+      !parsedDependenciaId
+    ) {
+      return NextResponse.json(
+        { error: "Solo puedes crear documentos dentro de tu dependencia asignada" },
+        { status: 403 }
+      );
+    }
+
+    const effectiveDependenciaId =
+      scope.restricted && scope.allowedDependenciaId
+        ? scope.allowedDependenciaId
+        : parsedDependenciaId || undefined;
 
     const documento = await createDocumento({
       nombre_doc,
@@ -248,7 +353,7 @@ export async function POST(request: NextRequest) {
       url_cons_doc,
       estatus_doc,
       version_doc,
-      id_dep,
+      id_dep: effectiveDependenciaId,
       num_caja,
       ubicacion_doc,
       estante_doc,
@@ -275,7 +380,7 @@ export async function PUT(request: NextRequest) {
     const payload = await verifyToken(token);
 
     if (!payload) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+      return NextResponse.json({ error: "Token invalido" }, { status: 401 });
     }
 
     if (payload.id_rol === 10) {
@@ -301,38 +406,56 @@ export async function PUT(request: NextRequest) {
     }
 
     const scope = await getDocumentScopeForUser(payload.id_usuarios, payload.id_rol);
-    if (
-      scope.restricted &&
-      !canAccessDocumentSecretaria(
-        payload.id_rol,
-        documentoActual.id_secre,
-        scope.allowedSecretariaId
-      )
-    ) {
-      return NextResponse.json(
-        { error: "No puedes modificar documentos de otra secretaría" },
-        { status: 403 }
-      );
+    if (scope.restricted) {
+      const accessCheck = canAccessScopedDocumento(payload.id_rol, scope, documentoActual);
+      if (!accessCheck.ok) {
+        return NextResponse.json({ error: accessCheck.error }, { status: 403 });
+      }
     }
 
     if (updateData.id_secre !== undefined) {
       const nextSecretariaId = Number(updateData.id_secre);
 
       if (!Number.isInteger(nextSecretariaId) || nextSecretariaId <= 0) {
-        return NextResponse.json({ error: "id_secre inválido" }, { status: 400 });
+        return NextResponse.json({ error: "id_secre invalido" }, { status: 400 });
       }
 
-      if (
-        scope.restricted &&
-        nextSecretariaId !== scope.allowedSecretariaId
-      ) {
+      if (scope.restricted && nextSecretariaId !== scope.allowedSecretariaId) {
         return NextResponse.json(
-          { error: "No puedes mover documentos a otra secretaría" },
+          { error: "No puedes mover documentos a otra secretaria" },
           { status: 403 }
         );
       }
 
       updateData.id_secre = nextSecretariaId;
+    }
+
+    if (updateData.id_dep !== undefined) {
+      const nextDependenciaId = parseBodyDependenciaId(updateData.id_dep);
+      const dependenciaWasProvided =
+        updateData.id_dep !== null && updateData.id_dep !== "";
+
+      if (dependenciaWasProvided && !nextDependenciaId) {
+        if (!(scope.restricted && scope.allowedDependenciaId)) {
+          return NextResponse.json({ error: "id_dep invalido" }, { status: 400 });
+        }
+      }
+
+      if (scope.restricted && scope.allowedDependenciaId) {
+        if (
+          nextDependenciaId &&
+          nextDependenciaId !== scope.allowedDependenciaId
+        ) {
+          return NextResponse.json(
+            { error: "No puedes mover documentos a otra dependencia" },
+            { status: 403 }
+          );
+        }
+
+        updateData.id_dep = scope.allowedDependenciaId;
+      } else {
+        updateData.id_dep = nextDependenciaId;
+      }
     }
 
     const documento = await updateDocumento({
@@ -368,7 +491,7 @@ export async function DELETE(request: NextRequest) {
     const payload = await verifyToken(token);
 
     if (!payload) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+      return NextResponse.json({ error: "Token invalido" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -388,18 +511,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const scope = await getDocumentScopeForUser(payload.id_usuarios, payload.id_rol);
-    if (
-      scope.restricted &&
-      !canAccessDocumentSecretaria(
-        payload.id_rol,
-        documentoActual.id_secre,
-        scope.allowedSecretariaId
-      )
-    ) {
-      return NextResponse.json(
-        { error: "No puedes eliminar documentos de otra secretaría" },
-        { status: 403 }
-      );
+    if (scope.restricted) {
+      const accessCheck = canAccessScopedDocumento(payload.id_rol, scope, documentoActual);
+      if (!accessCheck.ok) {
+        return NextResponse.json({ error: accessCheck.error }, { status: 403 });
+      }
     }
 
     const documento = await deleteDocumento(idDoc, motivoBaja || undefined);

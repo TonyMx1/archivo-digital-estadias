@@ -1,4 +1,4 @@
-import { getSecretarias, getUserById } from "@/lib/db";
+import { getDependenciasBySecretaria, getSecretarias, getUserById } from "@/lib/db";
 
 const GLOBAL_DOCUMENT_ACCESS_ROLE_IDS = new Set([1, 2]);
 
@@ -8,9 +8,16 @@ type SecretariaRecord = {
   sec_nomcl?: string | null;
 };
 
+type DependenciaRecord = {
+  id_dependencia: number;
+  nombre_dependencia: string;
+  dep_nomcl?: string | null;
+};
+
 type UserRecord = {
   id_usuarios: number;
   nom_secre?: string | null;
+  nom_dependencia?: string | null;
 };
 
 export class DocumentScopeError extends Error {
@@ -23,7 +30,7 @@ export class DocumentScopeError extends Error {
   }
 }
 
-function normalizeSecretariaName(value: string | null | undefined) {
+function normalizeCatalogName(value: string | null | undefined) {
   if (!value) {
     return "";
   }
@@ -36,15 +43,32 @@ function normalizeSecretariaName(value: string | null | undefined) {
     .toUpperCase();
 }
 
-function matchesSecretariaName(secretaria: SecretariaRecord, value: string) {
-  const normalizedValue = normalizeSecretariaName(value);
+function matchesCatalogEntry(
+  candidates: Array<string | null | undefined>,
+  value: string
+) {
+  const normalizedValue = normalizeCatalogName(value);
   if (!normalizedValue) {
     return false;
   }
 
-  return [secretaria.nombre_secretaria, secretaria.sec_nomcl]
+  return candidates
     .filter((candidate): candidate is string => Boolean(candidate))
-    .some((candidate) => normalizeSecretariaName(candidate) === normalizedValue);
+    .some((candidate) => normalizeCatalogName(candidate) === normalizedValue);
+}
+
+function matchesSecretariaName(secretaria: SecretariaRecord, value: string) {
+  return matchesCatalogEntry(
+    [secretaria.nombre_secretaria, secretaria.sec_nomcl],
+    value
+  );
+}
+
+function matchesDependenciaName(dependencia: DependenciaRecord, value: string) {
+  return matchesCatalogEntry(
+    [dependencia.nombre_dependencia, dependencia.dep_nomcl],
+    value
+  );
 }
 
 export function hasGlobalDocumentAccess(idRol: number) {
@@ -58,6 +82,8 @@ export async function getDocumentScopeForUser(idUsuarios: number, idRol: number)
       user: null,
       allowedSecretariaId: null,
       allowedSecretariaName: null,
+      allowedDependenciaId: null,
+      allowedDependenciaName: null,
     };
   }
 
@@ -69,7 +95,7 @@ export async function getDocumentScopeForUser(idUsuarios: number, idRol: number)
 
   if (!user.nom_secre?.trim()) {
     throw new DocumentScopeError(
-      "Tu usuario no tiene una secretaría asignada. Contacta al administrador."
+      "Tu usuario no tiene una secretaria asignada. Contacta al administrador."
     );
   }
 
@@ -80,8 +106,30 @@ export async function getDocumentScopeForUser(idUsuarios: number, idRol: number)
 
   if (!allowedSecretaria) {
     throw new DocumentScopeError(
-      `La secretaría asignada a tu usuario no existe en el catálogo: ${user.nom_secre}`
+      `La secretaria asignada a tu usuario no existe en el catalogo: ${user.nom_secre}`
     );
+  }
+
+  let allowedDependenciaId: number | null = null;
+  let allowedDependenciaName: string | null = null;
+
+  if (user.nom_dependencia?.trim()) {
+    const dependencias = (await getDependenciasBySecretaria(
+      Number(allowedSecretaria.id_secretaria)
+    )) as DependenciaRecord[];
+
+    const allowedDependencia = dependencias.find((dependencia) =>
+      matchesDependenciaName(dependencia, user.nom_dependencia as string)
+    );
+
+    if (!allowedDependencia) {
+      throw new DocumentScopeError(
+        `La dependencia asignada a tu usuario no existe en el catalogo: ${user.nom_dependencia}`
+      );
+    }
+
+    allowedDependenciaId = Number(allowedDependencia.id_dependencia);
+    allowedDependenciaName = allowedDependencia.nombre_dependencia;
   }
 
   return {
@@ -89,6 +137,8 @@ export async function getDocumentScopeForUser(idUsuarios: number, idRol: number)
     user,
     allowedSecretariaId: Number(allowedSecretaria.id_secretaria),
     allowedSecretariaName: allowedSecretaria.nombre_secretaria,
+    allowedDependenciaId,
+    allowedDependenciaName,
   };
 }
 
@@ -106,4 +156,24 @@ export function canAccessDocumentSecretaria(
   }
 
   return Number(documentoSecretariaId) === Number(allowedSecretariaId);
+}
+
+export function canAccessDocumentDependencia(
+  idRol: number,
+  documentoDependenciaId: number | null | undefined,
+  allowedDependenciaId: number | null
+) {
+  if (hasGlobalDocumentAccess(idRol)) {
+    return true;
+  }
+
+  if (!allowedDependenciaId) {
+    return true;
+  }
+
+  if (!documentoDependenciaId) {
+    return false;
+  }
+
+  return Number(documentoDependenciaId) === Number(allowedDependenciaId);
 }

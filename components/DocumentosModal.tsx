@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useDocumentos, Documento } from "@/hooks/useDocumentos";
 import type { Secretaria } from "@/hooks/useSecretarias";
-import { DatePicker } from "react-datepicker"
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import { es } from "date-fns/locale/es";
 import "react-datepicker/dist/react-datepicker.css";
 import { ChevronDown } from 'lucide-react';
+import { Datepicker } from "flowbite-react";
 
 // Registrar locale español
 registerLocale('es', es);
 setDefaultLocale('es');
+
 
 interface TipoDocumento {
   id_documento: number;
@@ -84,6 +85,8 @@ export default function DocumentosModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'camera'>('file');
   const [showConservacionDropdown, setShowConservacionDropdown] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const normalizeSecretariaName = (value: string | null | undefined) => {
     if (!value) return "";
@@ -124,8 +127,7 @@ export default function DocumentosModal({
   const isSecretariaLocked = !hasGlobalDocumentAccess && Boolean(secretariaAsignada);
 
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processSelectedFile = (file: File) => {
     if (file) {
       setArchivo(file);
 
@@ -146,9 +148,54 @@ export default function DocumentosModal({
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const handleFileDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    if (!isSubmitting) {
+      setIsDragActive(true);
+    }
+  };
+
+  const handleFileDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    const nextTarget = e.relatedTarget;
+    if (nextTarget instanceof Node && e.currentTarget.contains(nextTarget)) {
+      return;
+    }
+
+    setIsDragActive(false);
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragActive(false);
+
+    if (isSubmitting) {
+      return;
+    }
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
   const removeFile = () => {
     setArchivo(null);
     setPreviewUrl(null);
+    setIsDragActive(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
 
@@ -770,29 +817,31 @@ export default function DocumentosModal({
                   Fecha de expedición del documento <span className="text-red-500">*</span>
                 </label>
                 <div className="relative w-full focus-within:text-[#0076aa]">
-                  <DatePicker
-                    selected={fechaDoc && fechaDoc.match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(fechaDoc + 'T00:00:00') : null}
-                    onChange={(date: Date | null) => {
-                      if (date) {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        setFechaDoc(`${year}-${month}-${day}`);
-                      } else {
-                        setFechaDoc("");
+                  <div className="w-full">
+                    <Datepicker
+                      key={`fechaDoc-${fechaDoc}`}
+                      language="es"
+                      value={
+                        fechaDoc && /^\d{4}-\d{2}-\d{2}$/.test(fechaDoc)
+                          ? new Date(fechaDoc + 'T00:00:00')
+                          : null
                       }
-                    }}
-                    className="w-full px-4 py-2 pl-12 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                    wrapperClassName="w-full"
-                    required
-                    disabled={isSubmitting}
-                    dateFormat="dd/MM/yyyy"
-                    placeholderText="DD/MM/AAAA"
-                    locale="es"
-                    showYearDropdown
-                    scrollableYearDropdown
-                    yearDropdownItemNumber={100}
-                  />
+                      onChange={(date: Date | null) => {
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          setFechaDoc(`${year}-${month}-${day}`);
+                        } else {
+                          setFechaDoc("");
+                        }
+                      }}
+                      className="w-full px-4 py-2 pl-12 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
+                      required
+                      disabled={isSubmitting}
+                      placeholder="DD/MM/AAAA"
+                    />
+                  </div>
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors pointer-events-none">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1016,7 +1065,7 @@ export default function DocumentosModal({
                     }`}
                   disabled={isSubmitting}
                 >
-                  📁 Seleccionar archivo
+                  📁 Subir archivo
                 </button>
                 <button
                   type="button"
@@ -1032,13 +1081,78 @@ export default function DocumentosModal({
               </div>
 
               {uploadMethod === 'file' ? (
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  accept="image/*,application/pdf,.doc,.docx"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-[#0076aa]"
-                  disabled={isSubmitting}
-                />
+                <div className="flex items-center justify-center w-full">
+                  <div
+                    onDragOver={handleFileDragOver}
+                    onDragLeave={handleFileDragLeave}
+                    onDrop={handleFileDrop}
+                    className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed px-6 text-center transition-all ${
+                      isSubmitting
+                        ? "cursor-not-allowed border-gray-200 bg-gray-100 opacity-70"
+                        : isDragActive
+                          ? "border-[#0076aa] bg-sky-50 shadow-inner"
+                          : "border-gray-300 bg-gray-50/70 hover:border-[#0076aa] hover:bg-sky-50/60"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center pb-6 pt-5 text-gray-600">
+                      <svg
+                        className={`mb-4 h-8 w-8 ${isDragActive ? "text-[#0076aa]" : "text-gray-500"}`}
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 5v9m-5 0H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2M8 9l4-5 4 5m1 8h.01"
+                        />
+                      </svg>
+                      <p className="mb-2 text-sm font-medium text-gray-700">
+                        {isDragActive ? "Suelta el archivo para cargarlo" : "Arrastra tu archivo aqui o usa el boton"}
+                      </p>
+                      <p className="mb-4 text-xs text-gray-500">
+                        Formatos permitidos: imagen, PDF, DOC y DOCX. Max. 30 MB
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center rounded-lg border border-transparent bg-[#0076aa] px-3 py-2 text-sm font-medium leading-5 text-white shadow-xs transition-colors hover:bg-[#005a85] focus:outline-none focus:ring-4 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isSubmitting}
+                      >
+                        <svg
+                          className="me-1.5 h-4 w-4"
+                          aria-hidden="true"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeWidth="2"
+                            d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                          />
+                        </svg>
+                        Buscar archivo
+                      </button>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileChange}
+                      accept="image/*,application/pdf,.doc,.docx"
+                      className="hidden"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
               ) : (
                 <input
                   type="file"
