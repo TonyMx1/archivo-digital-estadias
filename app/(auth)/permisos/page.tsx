@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { PERMISOS } from '@/lib/permisos';
+import AlertModal from '@/components/ui/AlertModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 interface RolConPermisos {
   id_rol: number;
@@ -48,29 +50,21 @@ export default function RolesPage() {
     isOpen: boolean;
     reloadOnClose?: boolean;
   }>({ message: '', type: 'info', isOpen: false, reloadOnClose: false });
-  const [alertVisible, setAlertVisible] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     message: string;
     isOpen: boolean;
     onConfirm: () => void;
   }>({ message: '', isOpen: false, onConfirm: () => {} });
-  const [confirmVisible, setConfirmVisible] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
   const [showAddRoleForm, setShowAddRoleForm] = useState(false);
   const [isSubmittingRole, setIsSubmittingRole] = useState(false);
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info', reloadOnClose = false) => {
     setAlertModal({ message, type, isOpen: true, reloadOnClose });
-    setAlertVisible(false);
-    setTimeout(() => setAlertVisible(true), 100);
   };
 
   const closeAlert = () => {
-    const shouldReload = Boolean(alertModal.reloadOnClose);
     setAlertModal({ message: '', type: 'info', isOpen: false, reloadOnClose: false });
-    if (shouldReload) {
-      window.location.reload();
-    }
   };
 
   const closeConfirm = () => {
@@ -113,6 +107,22 @@ export default function RolesPage() {
 
   const handleTogglePermiso = async (idRol: number, nombrePermiso: string, tienePermiso: boolean) => {
     setUpdatingPermiso(nombrePermiso);
+    const originalRoles = [...rolesConPermisos]; // Guardar estado original para posible reversión
+
+    // Actualización optimista
+    setRolesConPermisos(prev =>
+      prev.map(rol =>
+        rol.id_rol === idRol
+          ? {
+              ...rol,
+              permisos: tienePermiso
+                ? rol.permisos.filter(p => p !== nombrePermiso)
+                : [...rol.permisos, nombrePermiso],
+            }
+          : rol
+      )
+    );
+
     try {
       const method = tienePermiso ? 'DELETE' : 'POST';
       const response = await fetch('/api/admin/permisos', {
@@ -124,23 +134,21 @@ export default function RolesPage() {
       const data = await response.json();
       
       if (data.success) {
-        setRolesConPermisos(prev => 
-          prev.map(rol => 
-            rol.id_rol === idRol 
-              ? { ...rol, permisos: data.permisos || [] }
-              : rol
-          )
-        );
+        // La UI ya se actualizó optimísticamente, no es necesario volver a actualizarla aquí a menos que el servidor devuelva una lista de permisos diferente
         showAlert(
-          tienePermiso 
-            ? 'Permiso desactivado exitosamente' 
-            : 'Permiso activado exitosamente', 
+          tienePermiso
+            ? 'Permiso desactivado exitosamente'
+            : 'Permiso activado exitosamente',
           'success'
         );
       } else {
+        // Si hay un error, revertir al estado original
+        setRolesConPermisos(originalRoles);
         showAlert(data.error || 'Error al actualizar permiso', 'error');
       }
     } catch (error) {
+      // Si hay un error de red, revertir al estado original
+      setRolesConPermisos(originalRoles);
       console.error('Error al actualizar permiso:', error);
       showAlert('Error al actualizar permiso', 'error');
     } finally {
@@ -173,8 +181,8 @@ export default function RolesPage() {
         }]);
         setNewRoleName('');
         setShowAddRoleForm(false);
-        showAlert('Rol agregado exitosamente', 'success', true);
-        // Recargar la página para actualizar la lista de roles
+        showAlert('Rol agregado exitosamente', 'success'); // Quitar `true` de `reloadOnClose`
+        loadPermisosRoles(); // Volver a cargar los roles
       } else {
         showAlert('Error al agregar el rol: ' + (data.error || 'Error desconocido'), 'error');
       }
@@ -273,12 +281,20 @@ export default function RolesPage() {
           <div className="p-6">
             {/* Botón para agregar nuevo rol */}
             <div className="mb-6 flex justify-between items-center">
-              {/* <h2 className="text-xl font-semibold text-gray-800">Roles del Sistema</h2> */}
               <button
                 onClick={() => window.location.href = '/admin'}
                 className="flex items-center gap-2 px-4 py-2 bg-[#0076aa] text-white rounded-lg hover:bg-[#005a85] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Volver a Usuarios
+              </button>
+              <button
+                onClick={() => setShowAddRoleForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#0076aa] text-white rounded-lg hover:bg-[#005a85] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Agregar Nuevo Rol
               </button>
             </div>
 
@@ -299,7 +315,7 @@ export default function RolesPage() {
                     <RolesSkeleton />
                   ) : rolesConPermisos.length === 0 ? (
                     <tr className="bg-[#f4f7fb] border-b border-default">
-                      <td colSpan={5} className="px-6 py-4 text-center">
+                      <td colSpan={4} className="px-6 py-4 text-center">
                         No hay roles disponibles
                       </td>
                     </tr>
