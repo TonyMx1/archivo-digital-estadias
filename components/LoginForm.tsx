@@ -95,14 +95,14 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
 
           <div className="flex items-center justify-center">
-            <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-black/10 border border-gray-100">
-              <div className="rounded-xl border border-gray-200 p-5 space-y-4 bg-white shadow-sm flex flex-col flex-grow">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-3 sm:p-4 shadow-2xl ring-1 ring-black/10 border border-gray-100">
+              <div className="rounded-xl border border-gray-200 p-4 sm:p-5 space-y-4 bg-white shadow-sm flex flex-col grow">
                 <div className="text-center space-y-2">
                   <div className="flex items-center justify-center gap-3">
                     {/* <div className="h-10 w-10 rounded-xl bg-[#0b3b60] text-white flex items-center justify-center font-bold">
                       AD
                     </div> */}
-                    <div className="bg-gradient-to-r from-[#0b3b60] to-[#0076aa] bg-clip-text text-transparent">
+                    <div className="bg-linear-to-r from-[#0b3b60] to-[#0076aa] bg-clip-text text-transparent">
                       <h2 className="text-2xl font-bold">Bienvenido</h2>
                     </div>
                   </div>
@@ -113,15 +113,15 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-3 mx-auto flex-1 w-sm max-w-md">
-                  <div className=" rounded-xl p-3 border border-gray-200">
+                <form onSubmit={handleSubmit} className="space-y-3 mx-auto flex-1 w-full max-w-md">
+                  <div className="rounded-xl p-3 sm:p-4 border border-gray-200">
                     <label
                       htmlFor="curp"
                       className="block text-lg font-medium text-[#0b3b60] mb-2 pl-4"
                     >
                       CURP
                     </label>
-                    <div className="flex shadow-sm rounded-lg border border-gray-300 bg-white">
+                    <div className="flex min-w-0 shadow-sm rounded-lg border border-gray-300 bg-white">
                       <span className="inline-flex items-center px-3 text-sm text-gray-600 bg-gray-50 border-r border-gray-300 rounded-l-lg">
                         <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                       </span>
@@ -143,7 +143,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         onCut={handleBlockClipboard}
                         onContextMenu={handleBlockContextMenu}
                         style={{ textTransform: 'uppercase' }}
-                        className={`block w-full px-5 py-2.5 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500 ${curpLength > 0 && curpLength !== 18
+                        className={`block w-full min-w-0 px-5 py-2.5 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500 ${curpLength > 0 && curpLength !== 18
                           ? 'border-red-300 bg-red-50'
                           : 'bg-white'
                           }`}
@@ -171,14 +171,14 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                     )} */}
                   </div>
 
-                  <div className="rounded-xl p-4 border border-gray-200">
+                  <div className="rounded-xl p-3 sm:p-4 border border-gray-200">
                     <label
                       htmlFor="password"
                       className="block text-lg font-medium text-[#0b3b60] mb-2 pl-4"
                     >
                       Contraseña
                     </label>
-                    <div className="flex shadow-sm rounded-lg border border-gray-300 bg-white relative">
+                    <div className="flex min-w-0 shadow-sm rounded-lg border border-gray-300 bg-white relative">
                       <span className="inline-flex items-center px-3 text-sm text-gray-600 bg-gray-50 border-r border-gray-300 rounded-l-lg">
                         <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
                       </span>
@@ -194,7 +194,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         onPaste={handleBlockClipboard}
                         onCut={handleBlockClipboard}
                         onContextMenu={handleBlockContextMenu}
-                        className="block w-full px-3 py-2.5 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500"
+                        className="block w-full min-w-0 px-3 py-2.5 pr-10 bg-white border-0 text-gray-900 text-sm rounded-r-lg focus:ring-2 focus:ring-[#0b3b60] placeholder:text-gray-500"
                         placeholder="••••••••••••••••"
                         required
                       />
@@ -251,13 +251,13 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         ref={errorRef}
                         className={`
     ${error.includes('incorrecta') ? 'bg-red-50 border-red-200 text-red-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'}
-    px-4 py-3 rounded-lg text-sm text-left break-words animate-shake flex items-start gap-2
+    px-4 py-3 rounded-lg text-sm text-left wrap-break-words animate-shake flex items-start gap-2
   `}
                       >
                         {/* Icono de candado para errores de credenciales */}
                         {error.includes('incorrecta') ? (
                           <svg
-                            className="w-5 h-5 flex-shrink-0 mt-0.5"
+                            className="w-5 h-5 shrink-0 mt-0.5"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                             xmlns="http://www.w3.org/2000/svg"
@@ -268,7 +268,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                         ) : (
                           /* Icono de advertencia para otros errores */
                           <svg
-                            className="w-5 h-5 flex-shrink-0 mt-0.5"
+                            className="w-5 h-5 shrink-0 mt-0.5"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                             xmlns="http://www.w3.org/2000/svg"
