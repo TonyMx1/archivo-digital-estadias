@@ -810,7 +810,7 @@ export default function DocumentosPage() {
 
             {loading ? (
               // Skeleton loading state
-              <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8 min-h-[780px] content-start">
+              <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8 min-h-195 content-start">
                 {Array.from({ length: 6 }).map((_, index) => (
                   <DocumentoSkeleton key={index} />
                 ))}
@@ -839,7 +839,7 @@ export default function DocumentosPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8 min-h-[780px] content-start">
+                <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8 min-h-195 content-start">
                   {documentosPaginados.map((documento) => (
                     <div
                       key={documento.id_doc}
