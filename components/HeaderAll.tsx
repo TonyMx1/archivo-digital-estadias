@@ -156,12 +156,12 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
     <>
       {/* Menú lateral */}
       <div
-        className={`fixed top-0 left-0 h-full w-72 bg-[#0076aa] shadow-2xl z-60 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 left-0 h-full w-72 bg-[#0b3b60] shadow-2xl z-60 transform transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         <div className="flex flex-col flex-center h-full">
           {/* Encabezado del menú */}
-          <div className="bg-[#0076aa] px-4 py-4">
+          <div className="bg-[#0b3b60] px-4 py-4">
             <div className="flex flex-col items-center gap-2">
               <div className="text-center">
                 
@@ -303,7 +303,7 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
       )}
 
       {/* Header */}
-      <header className="bg-[#0076aa] shadow-md w-full top-0 z-50">
+      <header className="bg-[#0b3b60] shadow-md w-full top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
 
@@ -325,8 +325,8 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               {showLogo && (
                 <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center shrink-0">
                   <Image
-                    src="/logo_2.png"
-                    alt="Logo del Sistema"
+                    src="/logo-Photoroom.png"
+                    alt="Legado de Bien Común"
                     width={40}
                     height={40}
                     className="w-10 h-10 object-contain"
@@ -336,11 +336,11 @@ const HeaderAll: React.FC<HeaderAllProps> = ({
               )}
 
               <div className={`text-center ${showLogo ? 'sm:text-left' : 'text-center'} min-w-0`}>
-                <h1 className="text-white font-semibold text-sm sm:text-base md:text-lg truncate">
+                <h1 className="text-white font-semibold text-md sm:text-base md:text-lg truncate">
                   {pageTitle}
                 </h1>
                 {pageSubtitle && (
-                  <p className="text-white/70 text-xs sm:text-sm hidden sm:block truncate">
+                  <p className="text-white/80 text-xs sm:text-sm hidden sm:block truncate">
                     {pageSubtitle}
                   </p>
                 )}
