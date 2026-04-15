@@ -9,8 +9,14 @@ import 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 
 export const runtime = 'nodejs';
 
+function parsePositiveEnvInt(value: string | undefined, fallback: number) {
+  const parsed = Number.parseInt(value || '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
-const OCR_TIMEOUT_MS = 60_000;
+const OCR_TIMEOUT_MS = parsePositiveEnvInt(process.env.OCR_TIMEOUT_MS, 180_000);
+const MAX_OCR_TEXT_CHARS = parsePositiveEnvInt(process.env.OCR_MAX_TEXT_CHARS, 200_000);
 
 function truncateText(text: string, maxChars: number) {
   if (text.length <= maxChars) return text;
@@ -18,11 +24,7 @@ function truncateText(text: string, maxChars: number) {
 }
 
 function getTesseractWorkerPath() {
-  // En Next/Turbopack, `require.resolve()` puede devolver rutas con placeholders tipo "[project]"
-  // que NO son rutas reales en disco y fallan con ERR_WORKER_PATH / MODULE_NOT_FOUND.
-  // Preferimos construir una ruta real desde el root del proyecto.
   const projectRoot = process.cwd();
-
   const candidates = [
     path.join(projectRoot, 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js'),
   ];
@@ -31,14 +33,13 @@ function getTesseractWorkerPath() {
     if (fs.existsSync(abs)) return abs;
   }
 
-  // Fallback: intentar resolver por Node y normalizar si viene con "[project]".
   try {
     const require = createRequire(import.meta.url);
     const pkgPath = require.resolve('tesseract.js/package.json');
     const pkgDir = path.dirname(pkgPath);
     const absPath = path.join(pkgDir, 'src', 'worker-script', 'node', 'index.js');
-
     const normalized = absPath.replace(/\[project\]/gi, projectRoot);
+
     if (fs.existsSync(normalized)) return normalized;
     if (fs.existsSync(absPath)) return absPath;
   } catch {
@@ -48,11 +49,28 @@ function getTesseractWorkerPath() {
   throw new Error('No se pudo localizar el worker de Tesseract.js en node_modules');
 }
 
+function getTesseractLanguageOptions(langCode: string) {
+  const projectRoot = process.cwd();
+  const trainedDataCandidates = [
+    path.join(projectRoot, `${langCode}.traineddata`),
+    path.join(projectRoot, 'ocr', `${langCode}.traineddata`),
+    path.join(projectRoot, 'public', 'ocr', `${langCode}.traineddata`),
+  ];
+  const localTrainedData = trainedDataCandidates.find((candidate) => fs.existsSync(candidate));
+
+  if (!localTrainedData) {
+    return {};
+  }
+
+  return {
+    langPath: path.dirname(localTrainedData),
+    gzip: false,
+  };
+}
+
 async function extractPdfTextWithPdfjs(buffer: Buffer) {
   const pdfjs: any = pdfjsLib as any;
   try {
-    // En Next/Turbopack a veces intenta levantar "fake worker" aunque disableWorker sea true.
-    // Forzamos a no usar worker.
     if (pdfjs?.GlobalWorkerOptions) {
       pdfjs.GlobalWorkerOptions.workerSrc = '';
       pdfjs.GlobalWorkerOptions.workerPort = null;
@@ -72,6 +90,7 @@ async function extractPdfTextWithPdfjs(buffer: Buffer) {
     const strings = (content.items || [])
       .map((it: any) => (typeof it?.str === 'string' ? it.str : ''))
       .filter(Boolean);
+
     if (strings.length) {
       text += strings.join(' ') + '\n';
     }
@@ -105,18 +124,18 @@ export async function POST(req: NextRequest) {
     if (archivo.size > MAX_FILE_SIZE) {
       const sizeInMB = (archivo.size / (1024 * 1024)).toFixed(2);
       return NextResponse.json(
-        { error: `El archivo es demasiado grande (${sizeInMB} MB). Máximo permitido: 25 MB.` },
+        { error: `El archivo es demasiado grande (${sizeInMB} MB). Maximo permitido: 25 MB.` },
         { status: 413 }
       );
     }
 
     const tipo = archivo.type || '';
     const nombre = archivo.name || '';
-
     const arrayBuffer = await archivo.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     let textoExtraido = '';
+    let ocrError: string | null = null;
     let metodo: 'pdfjs-dist' | 'mammoth' | 'tesseract' | 'none' = 'none';
 
     if (tipo === 'application/pdf' || nombre.toLowerCase().endsWith('.pdf')) {
@@ -126,63 +145,63 @@ export async function POST(req: NextRequest) {
           .replace(/\u0000/g, '')
           .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 
-        console.log('📄 OCR/PDF pdfjs:', {
-          nombre,
-          tipo,
-          rawLength: extractedTextRaw.length,
-          cleanedLength: extractedText.length,
-        });
-
         if (extractedText.trim().length > 0) {
           textoExtraido = extractedText;
           metodo = 'pdfjs-dist';
+        } else {
+          ocrError =
+            'PDF sin capa de texto detectable. Si el archivo es escaneado, se requiere OCR por imagen.';
         }
       } catch (error: any) {
-        console.error('❌ Error pdfjs-dist:', {
-          nombre,
-          tipo,
-          mensaje: error?.message,
-        });
-      }
-
-      if (!textoExtraido.trim()) {
-        // OCR de PDFs escaneados requiere convertir páginas a imagen. En esta implementación
-        // inicial devolvemos texto vacío para no bloquear el flujo.
-        metodo = 'none';
+        ocrError = error?.message || 'Fallo la extraccion con PDF.js';
       }
     } else if (
       tipo === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       nombre.toLowerCase().endsWith('.docx')
     ) {
-      const result = await withTimeout(mammoth.extractRawText({ buffer }), OCR_TIMEOUT_MS);
-      textoExtraido = result?.value || '';
-      metodo = 'mammoth';
+      try {
+        const result = await withTimeout(mammoth.extractRawText({ buffer }), OCR_TIMEOUT_MS);
+        textoExtraido = result?.value || '';
+        metodo = 'mammoth';
+      } catch (error: any) {
+        ocrError = error?.message || 'Fallo la extraccion con Mammoth';
+      }
     } else if (tipo.startsWith('image/')) {
       const workerPath = getTesseractWorkerPath();
-      console.log('🧠 OCR/Tesseract workerPath:', workerPath);
+      const languageOptions = getTesseractLanguageOptions('spa');
+      const cachePath = path.join(process.cwd(), '.cache', 'tesseract');
+      fs.mkdirSync(cachePath, { recursive: true });
 
-      const worker: any = await withTimeout(
-        // tesseract.js@7: createWorker(langs?, oem?, options?)
-        (createWorker as any)(['spa'], undefined, {
-          workerPath,
-        }),
-        OCR_TIMEOUT_MS
-      );
+      let worker: any = null;
 
       try {
+        worker = await withTimeout(
+          (createWorker as any)(['spa'], undefined, {
+            workerPath,
+            cachePath,
+            cacheMethod: 'write',
+            ...languageOptions,
+          }),
+          OCR_TIMEOUT_MS
+        );
+
         const result: any = await withTimeout(worker.recognize(buffer), OCR_TIMEOUT_MS);
         textoExtraido = result?.data?.text || '';
         metodo = 'tesseract';
+      } catch (error: any) {
+        ocrError = error?.message || 'Fallo OCR con Tesseract';
       } finally {
-        try {
-          await worker.terminate();
-        } catch {
-          // ignore
+        if (worker) {
+          try {
+            await worker.terminate();
+          } catch {
+            // ignore
+          }
         }
       }
     }
 
-    textoExtraido = truncateText(textoExtraido, 200_000);
+    textoExtraido = truncateText(textoExtraido, MAX_OCR_TEXT_CHARS);
 
     return NextResponse.json({
       success: true,
@@ -190,9 +209,10 @@ export async function POST(req: NextRequest) {
       metodo,
       tipo,
       nombre,
+      ocr_error: ocrError,
     });
   } catch (error: any) {
-    console.error('💥 Error en /api/ocr:', error);
+    console.error('Error en /api/ocr:', error);
     return NextResponse.json(
       { error: 'Error interno en OCR', mensaje: error.message },
       { status: 500 }

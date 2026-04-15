@@ -34,6 +34,22 @@ function parseBodyDependenciaId(value: unknown) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function normalizeMetaDoc(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function handleScopedError(error: unknown, fallbackMessage: string) {
   if (error instanceof DocumentScopeError) {
     return NextResponse.json(
@@ -340,7 +356,7 @@ export async function POST(request: NextRequest) {
       anio_doc,
       comentario_doc,
       id_usu_alta: id_usu_alta || payload.id_usuarios,
-      meta_doc,
+      meta_doc: normalizeMetaDoc(meta_doc),
       desc_doc,
       oficio_doc,
       expediente_doc,
@@ -456,6 +472,10 @@ export async function PUT(request: NextRequest) {
       } else {
         updateData.id_dep = nextDependenciaId;
       }
+    }
+
+    if (updateData.meta_doc !== undefined) {
+      updateData.meta_doc = normalizeMetaDoc(updateData.meta_doc);
     }
 
     const documento = await updateDocumento({

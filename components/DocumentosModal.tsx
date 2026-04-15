@@ -487,6 +487,7 @@ export default function DocumentosModal({
     setIsSubmitting(true);
     let finalUrlConsDoc = urlConsDoc;
     let metaDocFinal: string | undefined = metaDoc.trim() || undefined;
+    const MAX_OCR_TEXT_IN_META = 50_000;
 
     // PASO 2: Si hay un archivo, subirlo primero usando nuestra función
     if (archivo) {
@@ -511,6 +512,27 @@ export default function DocumentosModal({
           throw new Error(uploadResult.error || 'Error al subir archivo');
         }
 
+        let metaObj: any = {};
+        const rawMeta = metaDoc.trim();
+
+        if (rawMeta) {
+          try {
+            const parsed = JSON.parse(rawMeta);
+            if (parsed && typeof parsed === 'object') {
+              metaObj = parsed;
+            } else {
+              metaObj = { meta_usuario: rawMeta };
+            }
+          } catch {
+            metaObj = { meta_usuario: rawMeta };
+          }
+        }
+
+        metaObj.fecha_ocr = new Date().toISOString();
+        metaObj.nombre_archivo = archivo.name;
+        metaObj.tipo_mime = archivo.type;
+        metaObj.url_cons_doc = finalUrlConsDoc;
+
         try {
           const ocrForm = new FormData();
           ocrForm.append('archivo', archivo, archivo.name);
@@ -520,39 +542,42 @@ export default function DocumentosModal({
             body: ocrForm,
           });
 
-          if (ocrResponse.ok) {
-            const ocrData = await ocrResponse.json();
-            if (ocrData?.success && typeof ocrData?.texto_extraido === 'string') {
-              let metaObj: any = {};
-              const raw = metaDoc.trim();
+          let ocrData: any = null;
+          try {
+            ocrData = await ocrResponse.json();
+          } catch {
+            ocrData = null;
+          }
 
-              if (raw) {
-                try {
-                  const parsed = JSON.parse(raw);
-                  if (parsed && typeof parsed === 'object') {
-                    metaObj = parsed;
-                  } else {
-                    metaObj = { meta_usuario: raw };
-                  }
-                } catch {
-                  metaObj = { meta_usuario: raw };
-                }
-              }
+          if (ocrResponse.ok && ocrData?.success) {
+            const rawExtractedText =
+              typeof ocrData?.texto_extraido === 'string' ? ocrData.texto_extraido : '';
 
-              metaObj.texto_extraido = ocrData.texto_extraido;
-              metaObj.fecha_ocr = new Date().toISOString();
-              metaObj.metodo_extraccion = ocrData.metodo;
-              metaObj.nombre_archivo = archivo.name;
-              metaObj.tipo_mime = archivo.type;
-              metaObj.url_cons_doc = finalUrlConsDoc;
-
-              metaDocFinal = JSON.stringify(metaObj);
-              setMetaDoc(metaDocFinal);
-            }
+            metaObj.texto_extraido = rawExtractedText.slice(0, MAX_OCR_TEXT_IN_META);
+            metaObj.texto_extraido_truncado =
+              rawExtractedText.length > MAX_OCR_TEXT_IN_META;
+            metaObj.ocr_status = rawExtractedText.trim() ? 'ok' : 'sin_texto';
+            metaObj.metodo_extraccion = ocrData?.metodo || 'none';
+            metaObj.ocr_error = ocrData?.ocr_error || null;
+          } else {
+            metaObj.texto_extraido = '';
+            metaObj.ocr_status = 'error';
+            metaObj.metodo_extraccion = ocrData?.metodo || 'none';
+            metaObj.ocr_error =
+              ocrData?.error ||
+              ocrData?.mensaje ||
+              `Error HTTP ${ocrResponse.status} al procesar OCR`;
           }
         } catch (error: any) {
           console.error('❌ Error al extraer OCR:', error);
+          metaObj.texto_extraido = '';
+          metaObj.ocr_status = 'error';
+          metaObj.metodo_extraccion = 'none';
+          metaObj.ocr_error = error?.message || 'Error desconocido en OCR';
         }
+
+        metaDocFinal = JSON.stringify(metaObj);
+        setMetaDoc(metaDocFinal);
 
       } catch (error: any) {
         console.error("❌ Error al subir archivo:", error);
