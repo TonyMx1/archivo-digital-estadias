@@ -19,12 +19,14 @@
 
 ### Stack Tecnológico
 
-- **Frontend**: Next.js 16 + React 19 + TypeScript
+- **Frontend**: Next.js 16.1.1 + React 19.2.3 + TypeScript 5
 - **Backend**: Next.js API Routes + Node.js
-- **Base de Datos**: PostgreSQL
-- **Estilos**: TailwindCSS + Radix UI
-- **OCR**: Tesseract.js + PDF.js + Mammoth
-- **Autenticación**: JWT (jose)
+- **Base de Datos**: PostgreSQL (pg 8.16.3)
+- **Estilos**: TailwindCSS 4 + Radix UI + Flowbite React
+- **OCR**: Tesseract.js 7.0.0 + PDF.js 5.4.296 + Mammoth 1.11.0 + pdf-parse 2.4.5
+- **Autenticación**: JWT (jose 6.1.3)
+- **UI Components**: Lucide React 0.563.0 + Skeleton Labs 4.12.1
+- **Fechas**: date-fns 4.1.0 + react-datepicker 9.1.0 + react-day-picker 9.13.0
 
 ### Flujo de Arquitectura
 
@@ -32,6 +34,8 @@
 Usuario → Frontend (Next.js) → API Routes → PostgreSQL
                 ↓
             OCR Processing → Text Extraction → Search Index
+                ↓
+    Document Access Control → Permission Validation → Response
 ```
 
 ---
@@ -40,22 +44,24 @@ Usuario → Frontend (Next.js) → API Routes → PostgreSQL
 
 ### Variables de Entorno Requeridas
 
+> ⚠️ **Nota de Seguridad**: Nunca subas el archivo `.env.local` con credenciales reales a GitHub. Este archivo debe mantenerse local y agregarse al `.gitignore`.
+
 Crear archivo `.env.local`:
 
 ```env
 # Base de Datos PostgreSQL
-DB_HOST=sanjuandelrio.sytes.net
+DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=archivodigital_practicante
-DB_USER=user_flota
-DB_PASSWORD=flota_2024!
+DB_NAME=nombre_base_datos
+DB_USER=usuario
+DB_PASSWORD=contraseña_segura
 DB_SSL=false
 
 # JWT Authentication
-JWT_SECRET=tu-secret-key-muy-segura-y-aleatoria-aqui-cambiar-en-produccion
+JWT_SECRET=genera_un_secreto_seguro_de_32_bytes
 
 # API Externa (CUS)
-CUS_API_URL=https://sanjuandelrio.gob.mx/tramites-sjr/Api/principal/login
+CUS_API_URL=https://api.ejemplo.gob.mx/login
 ```
 
 ### Generación de JWT Secret
@@ -73,38 +79,70 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 archivo-digital/
 ├── app/                     # Next.js App Router
+│   ├── (auth)/             # Rutas de autenticación
 │   ├── admin/              # Panel de administración
 │   ├── api/                # API Routes
 │   │   ├── activity/       # Tracking de actividad
 │   │   ├── admin/          # Gestión de administradores
-│   │   ├── auth/           # Autenticación
+│   │   ├── cus/            # API externa CUS
 │   │   ├── dependencias/   # Gestión de dependencias
 │   │   ├── documentos/     # CRUD documentos
+│   │   ├── login/          # Autenticación
+│   │   ├── logout/         # Cierre de sesión
 │   │   ├── ocr/            # Procesamiento OCR
+│   │   ├── prestamos/      # Gestión de préstamos
 │   │   ├── secretarias/    # Gestión de secretarías
-│   │   └── usuarios/       # Gestión de usuarios
+│   │   ├── statistics/     # Estadísticas del sistema
+│   │   ├── tipo-documento/ # Tipos de documento
+│   │   ├── upload/         # Subida de archivos
+│   │   └── user/           # Usuario actual
+│   ├── acerca-de/          # Página acerca de
 │   ├── documentos/         # Interfaz de documentos
-│   ├── exito/             # Página de éxito
-│   ├── globals.css        # Estilos globales
-│   ├── layout.tsx         # Layout principal
+│   ├── login/              # Página de login
+│   ├── visitante/          # Vista de visitante
+│   ├── globals.css         # Estilos globales
+│   ├── layout.tsx          # Layout principal
 │   └── page.tsx           # Dashboard
 ├── components/            # Componentes React
 │   ├── ui/                # Componentes UI base
 │   ├── ActivityTracker.tsx
 │   ├── DependenciasModal.tsx
 │   ├── DocumentosModal.tsx
-│   └── ...
+│   ├── ErrorState.tsx
+│   ├── ExitoFooter.tsx
+│   ├── HeaderAll.tsx
+│   ├── LoadingState.tsx
+│   ├── LoginAndVisitanteFooter.tsx
+│   ├── LoginForm.tsx
+│   ├── PaginationControls.tsx
+│   ├── PermissionGuard.tsx
+│   ├── SecretariasTable.tsx
+│   ├── SessionTimer.tsx
+│   ├── SkeletonCard.tsx
+│   └── UsersTable.tsx
 ├── hooks/                 # Hooks personalizados
 │   ├── useActivity.ts
 │   ├── useAdminUsers.ts
+│   ├── useCurrentUser.ts
 │   ├── useDependencias.ts
-│   └── useDocumentos.ts
+│   ├── useDocumentos.ts
+│   ├── useLogin.ts
+│   ├── usePagination.ts
+│   ├── usePermisos.tsx
+│   ├── usePrestamos.ts
+│   └── useSecretarias.ts
 ├── lib/                   # Utilidades
 │   ├── auth-permisos.ts   # Lógica de permisos
 │   ├── auth-server.ts     # Configuración auth servidor
 │   ├── auth.ts            # Utilidades auth
-│   └── cus-api.ts         # Cliente API CUS
-└── public/                # Archivos estáticos
+│   ├── cus-api.ts         # Cliente API CUS
+│   ├── db.ts              # Conexión base de datos
+│   ├── document-access.ts # Control acceso documentos
+│   ├── permisos.ts        # Definición permisos
+│   └── utils.ts           # Utilidades generales
+├── public/                # Archivos estáticos
+├── types/                 # Definiciones TypeScript
+└── docs/                  # Documentación
 ```
 
 ---
@@ -173,6 +211,25 @@ tipo_documento
 ├── id (serial, primary key)
 ├── nombre (varchar, unique)
 └── descripcion (text)
+
+-- Gestión de préstamos
+prestamos_documentos
+├── id_prestamo (serial, primary key)
+├── id_doc (integer, foreign key → documentos.id_doc)
+├── nombre_solicitante (varchar)
+├── curp_solicitante (varchar)
+├── area_solicitante (varchar)
+├── motivo_prestamo (text)
+├── observaciones (text)
+├── fecha_prestamo (timestamp)
+├── fecha_limite_devolucion (timestamp)
+├── fecha_devolucion (timestamp, nullable)
+├── estatus_prestamo (varchar: 'Prestado' | 'Vencido' | 'Devuelto' | 'Cancelado')
+├── vale_url (varchar, nullable)
+├── id_usuario_registro (integer, foreign key → usuarios.id)
+├── id_usuario_devolucion (integer, foreign key → usuarios.id, nullable)
+├── created_at (timestamp)
+└── updated_at (timestamp)
 ```
 
 ---
@@ -181,7 +238,7 @@ tipo_documento
 
 ### Autenticación
 
-#### `POST /api/auth/login`
+#### `POST /api/login`
 **Descripción**: Autentica usuarios y genera JWT token
 
 **Request Body**:
@@ -197,16 +254,37 @@ tipo_documento
 {
   "success": true,
   "user": {
-    "id": 1,
+    "id_usuarios": 1,
     "username": "admin",
-    "rol": "ADMIN_TOTAL"
+    "id_rol": 1,
+    "nombre_rol": "ADMIN_TOTAL"
   },
   "token": "jwt_token_here"
 }
 ```
 
-#### `POST /api/auth/logout`
+#### `POST /api/logout`
 **Descripción**: Cierra sesión del usuario
+
+#### `GET /api/user`
+**Descripción**: Obtiene información del usuario actual
+
+**Response**:
+```json
+{
+  "success": true,
+  "user": {
+    "id_usuarios": 1,
+    "curp": "ABC123456",
+    "id_rol": 1,
+    "id_general": "ADMIN001",
+    "nombre_usuario": "Administrador",
+    "nom_secre": "Secretaría General",
+    "nombre_rol": "ADMIN_TOTAL",
+    "permisos": ["VER_DOCUMENTOS", "CREAR_DOCUMENTOS", ...]
+  }
+}
+```
 
 ### Gestión de Documentos
 
@@ -235,22 +313,100 @@ tipo_documento
 - `secretaria_id`: Number
 - `dependencia_id`: Number
 
-#### `POST /api/ocr`
-**Descripción**: Procesa OCR de un archivo
+#### `POST /api/upload`
+**Descripción**: Sube archivos al servidor
 
-**Request Body**:
-```json
-{
-  "filePath": "string",
-  "fileType": "pdf|docx|image"
-}
-```
+**Request Body** (multipart/form-data):
+- `file`: Archivo (PDF, DOCX, imagen)
 
 **Response**:
 ```json
 {
   "success": true,
-  "text": "texto_extraido_aqui"
+  "filePath": "/uploads/filename.pdf",
+  "fileName": "filename.pdf"
+}
+```
+
+### Gestión de Préstamos
+
+#### `GET /api/prestamos`
+**Descripción**: Obtiene listado de préstamos con filtros
+
+**Query Parameters**:
+- `id_doc` (number): Filtrar por documento
+- `id_secre` (number): Filtrar por secretaría
+- `estatus_prestamo` (string): Filtrar por estatus ('Prestado', 'Vencido', 'Devuelto', 'Cancelado')
+
+**Response**:
+```json
+{
+  "success": true,
+  "prestamos": [
+    {
+      "id_prestamo": 1,
+      "id_doc": 123,
+      "nombre_doc": "Documento Ejemplo",
+      "nombre_solicitante": "Juan Pérez",
+      "curp_solicitante": "ABC123456",
+      "fecha_prestamo": "2026-01-15T10:00:00Z",
+      "fecha_limite_devolucion": "2026-01-22T10:00:00Z",
+      "estatus_prestamo": "Prestado"
+    }
+  ]
+}
+```
+
+#### `POST /api/prestamos`
+**Descripción**: Crea un nuevo préstamo
+
+**Request Body**:
+```json
+{
+  "id_doc": 123,
+  "nombre_solicitante": "Juan Pérez",
+  "curp_solicitante": "ABC123456",
+  "area_solicitante": "Dirección General",
+  "motivo_prestamo": "Revisión interna",
+  "observaciones": "Entregado en buenas condiciones",
+  "fecha_limite_devolucion": "2026-01-22"
+}
+```
+
+#### `PUT /api/prestamos`
+**Descripción**: Registra la devolución de un préstamo
+
+**Request Body**:
+```json
+{
+  "id_prestamo": 1,
+  "fecha_devolucion": "2026-01-20T15:30:00Z",
+  "observaciones_devolucion": "Devuelto en buen estado"
+}
+```
+
+### Estadísticas del Sistema
+
+#### `GET /api/statistics`
+**Descripción**: Obtiene estadísticas generales del sistema
+
+**Response**:
+```json
+{
+  "success": true,
+  "statistics": {
+    "total_secretarias": 15,
+    "total_dependencias": 45,
+    "total_documentos": 1250,
+    "archivos_prestados_activos": 23,
+    "documentos_por_secretaria": [
+      {
+        "id_secretaria": 1,
+        "nombre_secretaria": "Secretaría General",
+        "total_documentos": 150
+      }
+    ]
+  }
 }
 ```
 
@@ -267,7 +423,129 @@ tipo_documento
 
 ---
 
-## Autenticación y Seguridad
+## Control de Acceso y Permisos por Documento
+
+### Sistema de Alcance de Documentos
+
+El sistema implementa un control de acceso granular que restringe la visibilidad de los documentos según el rol y la asignación organizacional del usuario.
+
+#### Roles con Acceso Global
+```typescript
+const GLOBAL_DOCUMENT_ACCESS_ROLE_IDS = new Set([1, 2]); // ADMIN_TOTAL, EDITOR
+```
+
+- **ADMIN_TOTAL (1)**: Acceso completo a todos los documentos
+- **EDITOR (2)**: Acceso completo a todos los documentos
+- **SOLO_LECTURA (3)**: Acceso restringido a su secretaría/dependencia
+- **VISITANTE (9)**: Acceso mínimo
+
+#### Validación de Alcance
+
+```typescript
+// lib/document-access.ts
+export async function getDocumentScopeForUser(idUsuarios: number, idRol: number) {
+  if (hasGlobalDocumentAccess(idRol)) {
+    return {
+      restricted: false,
+      allowedSecretariaId: null,
+      allowedSecretariaName: null,
+      allowedDependenciaId: null,
+      allowedDependenciaName: null,
+    };
+  }
+  
+  // Para usuarios con acceso restringido
+  const user = await getUserById(idUsuarios);
+  const allowedSecretaria = secretarias.find(s => 
+    matchesSecretariaName(s, user.nom_secre)
+  );
+  
+  return {
+    restricted: true,
+    allowedSecretariaId: allowedSecretaria.id_secretaria,
+    allowedSecretariaName: allowedSecretaria.nombre_secretaria,
+    allowedDependenciaId: allowedDependencia?.id_dependencia,
+    allowedDependenciaName: allowedDependencia?.nombre_dependencia,
+  };
+}
+```
+
+#### Funciones de Validación
+
+```typescript
+// Verificar acceso a secretaría
+export function canAccessDocumentSecretaria(
+  idRol: number,
+  documentoSecretariaId: number,
+  allowedSecretariaId: number | null
+) {
+  if (hasGlobalDocumentAccess(idRol)) return true;
+  return Number(documentoSecretariaId) === Number(allowedSecretariaId);
+}
+
+// Verificar acceso a dependencia
+export function canAccessDocumentDependencia(
+  idRol: number,
+  documentoDependenciaId: number,
+  allowedDependenciaId: number | null
+) {
+  if (hasGlobalDocumentAccess(idRol)) return true;
+  if (!allowedDependenciaId) return true; // Solo secretaría
+  return Number(documentoDependenciaId) === Number(allowedDependenciaId);
+}
+```
+
+### Implementación en API Routes
+
+Las rutas API aplican automáticamente el control de acceso:
+
+```typescript
+// GET /api/documentos
+export async function GET(request: NextRequest) {
+  const scope = await getDocumentScopeForUser(payload.id, payload.idRol);
+  
+  if (scope.restricted) {
+    // Aplicar filtros de secretaría/dependencia
+    query += ` AND d.id_secre = $${paramIndex++}`;
+    params.push(scope.allowedSecretariaId);
+    
+    if (scope.allowedDependenciaId) {
+      query += ` AND d.id_depen = $${paramIndex++}`;
+      params.push(scope.allowedDependenciaId);
+    }
+  }
+}
+```
+
+### Componente PermissionGuard
+
+Protección de componentes UI basada en permisos:
+
+```typescript
+<PermissionGuard permiso="CREAR_DOCUMENTOS">
+  <Button>Crear Documento</Button>
+</PermissionGuard>
+
+<PermissionGuard permisos={["VER_DOCUMENTOS", "EDITAR_DOCUMENTOS"]} requireAll={false}>
+  <DocumentActions />
+</PermissionGuard>
+```
+
+### Manejo de Errores de Alcance
+
+```typescript
+export class DocumentScopeError extends Error {
+  status: number;
+  
+  constructor(message: string, status = 403) {
+    super(message);
+    this.name = "DocumentScopeError";
+    this.status = status;
+  }
+}
+```
+
+---
 
 ### Sistema de Roles
 
@@ -381,6 +659,7 @@ async function extractTextFromImage(filePath: string): Promise<string> {
 - Upload de archivos
 - Selectores dinámicos de secretaría/dependencia
 - Estados de carga y error
+- Integración con OCR
 
 ### ActivityTracker.tsx
 **Propósito**: Monitoreo de actividad en tiempo real
@@ -398,6 +677,51 @@ async function extractTextFromImage(filePath: string): Promise<string> {
 - Validación de duplicados
 - Toggle de estatus activo/inactivo
 
+### PermissionGuard.tsx
+**Propósito**: Componente de protección por permisos
+
+**Features**:
+- Validación de permisos específicos
+- Soporte para múltiples permisos
+- Fallback personalizado
+- Estados de carga
+
+### SessionTimer.tsx
+**Propósito**: Gestión de sesión de usuario
+
+**Features**:
+- Temporizador de inactividad
+- Alerta de expiración
+- Logout automático
+- Persistencia de estado
+
+### UsersTable.tsx
+**Propósito**: Tabla de gestión de usuarios
+
+**Features**:
+- Paginación integrada
+- Búsqueda y filtros
+- Acciones masivas
+- Estados de carga
+
+### SecretariasTable.tsx
+**Propósito**: Tabla de gestión de secretarías
+
+**Features**:
+- CRUD operations inline
+- Validación de duplicados
+- Toggle estatus
+- Estadísticas integradas
+
+### HeaderAll.tsx
+**Propósito**: Navegación principal del sistema
+
+**Features**:
+- Menú contextual por rol
+- Indicador de sesión activa
+- Accesos rápidos
+- Responsive design
+
 ---
 
 ## Hooks Personalizados
@@ -412,6 +736,63 @@ interface UseDocumentosReturn {
   actualizarDocumento: (id: number, data: FormData) => Promise<void>;
   eliminarDocumento: (id: number) => Promise<void>;
   buscarDocumentos: (filtros: SearchFilters) => Promise<void>;
+}
+```
+
+### useCurrentUser.ts
+```typescript
+interface CurrentUser {
+  id_usuarios: number;
+  curp: string;
+  id_rol: number;
+  id_general: string;
+  nombre_usuario: string | null;
+  nom_secre: string | null;
+  nombre_rol: string | null;
+  permisos: string[];
+}
+
+interface UseCurrentUserReturn {
+  user: CurrentUser | null;
+  loading: boolean;
+}
+```
+
+### usePrestamos.ts
+```typescript
+interface PrestamoDocumento {
+  id_prestamo: number;
+  id_doc: number;
+  nombre_doc: string;
+  nombre_solicitante: string;
+  curp_solicitante: string;
+  area_solicitante?: string;
+  motivo_prestamo?: string;
+  observaciones?: string;
+  fecha_prestamo: string;
+  fecha_limite_devolucion: string;
+  fecha_devolucion?: string;
+  estatus_prestamo: "Prestado" | "Vencido" | "Devuelto" | "Cancelado";
+  // ... otros campos
+}
+
+interface UsePrestamosReturn {
+  prestamos: PrestamoDocumento[];
+  loading: boolean;
+  error: string | null;
+  fetchPrestamos: (filters?: PrestamosFilters) => Promise<void>;
+  crearPrestamo: (prestamo: PrestamoData) => Promise<{success: boolean, error?: string}>;
+  devolverPrestamo: (payload: DevolucionPayload) => Promise<{success: boolean, error?: string}>;
+}
+```
+
+### usePermisos.tsx
+```typescript
+interface UsePermisosReturn {
+  hasPermission: (permiso: string) => boolean;
+  hasAnyPermission: (permisos: string[]) => boolean;
+  hasAllPermissions: (permisos: string[]) => boolean;
+  loading: boolean;
 }
 ```
 
@@ -434,6 +815,27 @@ interface UseDependenciasReturn {
   crearDependencia: (data: DependenciaData) => Promise<void>;
   actualizarDependencia: (id: number, data: Partial<DependenciaData>) => Promise<void>;
   toggleEstatus: (id: number) => Promise<void>;
+}
+```
+
+### useLogin.ts
+```typescript
+interface UseLoginReturn {
+  login: (credentials: LoginCredentials) => Promise<{success: boolean, error?: string}>;
+  loading: boolean;
+  error: string | null;
+}
+```
+
+### usePagination.ts
+```typescript
+interface UsePaginationReturn {
+  currentPage: number;
+  totalPages: number;
+  nextPage: () => void;
+  prevPage: () => void;
+  goToPage: (page: number) => void;
+  setTotalItems: (total: number) => void;
 }
 ```
 
@@ -487,7 +889,45 @@ npm start
 
 ---
 
-## Buenas Prácticas
+## Nuevas Funcionalidades (v0.1.0)
+
+### Sistema de Préstamos de Documentos
+
+- **Gestión completa**: Crear, consultar y devolver préstamos
+- **Control de estatus**: Prestado, Vencido, Devuelto, Cancelado
+- **Validación de acceso**: Solo usuarios autorizados pueden gestionar préstamos
+- **Integración documental**: Vinculación directa con documentos del sistema
+- **Reportes**: Generación de vales y seguimiento de historial
+
+### Panel de Estadísticas
+
+- **Métricas en tiempo real**: Conteo de secretarías, dependencias, documentos
+- **Préstamos activos**: Seguimiento de documentos prestados
+- **Análisis por secretaría**: Distribución de documentos por área
+- **Dashboard administrativo**: Vista general del estado del sistema
+
+### Mejoras en la Experiencia de Usuario
+
+- **Temporizador de sesión**: Gestión automática de inactividad
+- **Caching inteligente**: Mejora de rendimiento con caché por hooks
+- **Estados de carga**: Indicadores visuales durante operaciones
+- **Manejo de errores**: Mensajes descriptivos y recuperación de errores
+
+### Control de Acceso Granular
+
+- **Alcance por documento**: Restricción basada en secretaría/dependencia
+- **Validación automática**: Filtros aplicados en API routes
+- **Componentes protegidos**: PermissionGuard para UI condicional
+- **Normalización de catálogos**: Matching flexible de nombres
+
+### Optimizaciones Técnicas
+
+- **TypeScript estricto**: Mejor tipado y seguridad
+- **Componentes modulares**: Arquitectura reutilizable
+- **Hooks personalizados**: Lógica compartida y cacheo
+- **Middleware mejorado**: Validación de rutas y permisos
+
+---
 
 ### Seguridad
 - Nunca exponer JWT_SECRET en código
@@ -536,5 +976,6 @@ Para soporte técnico o reporte de issues, contactar al equipo de desarrollo del
 
 ---
 
-**Última actualización**: Enero 2026
+**Última actualización**: Abril 2026
 **Versión**: 0.1.0
+**Estado**: Activo en producción

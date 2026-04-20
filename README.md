@@ -2,30 +2,34 @@
 
 Sistema web para gestion documental del Municipio de San Juan del Rio, con autenticacion contra CUS, control de acceso por permisos y administracion de documentos/prestamos.
 
-- Version actual: `0.1.0`
-- Stack principal: `Next.js 16 + React 19 + TypeScript + PostgreSQL`
-- Ultima actualizacion de este README: `25 de marzo de 2026`
+- Version actual: `0.2.0`
+- Stack principal: `Next.js 16.1.1 + React 19.2.3 + TypeScript 5 + PostgreSQL`
+- Ultima actualizacion de este README: `20 de abril de 2026`
 
 ## Que hace el sistema
 
-- Inicio de sesion con CUS y alta automatica de usuario local.
-- Control de sesion (cookie JWT + tabla de sesiones + timeout por inactividad).
-- Gestion de documentos con metadatos archivisticos.
-- OCR para extraer texto de PDF, DOCX e imagenes.
-- Gestion de prestamos de documentos (alta, consulta y devolucion).
-- Catalogos de secretarias y dependencias.
-- Modulo de administracion de usuarios, roles y permisos.
-- Rol visitante (`id_rol = 9`) con redireccion obligatoria a `/visitante`.
+- **Autenticacion segura**: Inicio de sesion con CUS y alta automatica de usuario local.
+- **Control de sesion avanzado**: Cookie JWT + tabla de sesiones + timeout por inactividad con alertas.
+- **Gestion documental completa**: CRUD de documentos con metadatos archivisticos.
+- **OCR multi-formato**: Extraccion de texto de PDF, DOCX e imagenes con Tesseract.js 7.0.0.
+- **Sistema de prestamos**: Gestion completa de prestamos de documentos con ciclo de vida (Prestado → Vencido → Devuelto → Cancelado).
+- **Control de acceso granular**: Alcance por secretaria/dependencia con PermissionGuard.
+- **Panel de estadisticas**: Dashboard en tiempo real con metricas del sistema.
+- **Catalogos organizacionales**: Secretarias y dependencias con CRUD completo.
+- **Administracion de usuarios**: Gestion de usuarios, roles (ADMIN_TOTAL, EDITOR, SOLO_LECTURA, VISITANTE) y permisos.
+- **Rol visitante**: (`id_rol = 9`) con redireccion obligatoria a `/visitante` y acceso limitado.
 
 ## Tecnologias
 
 - `next@16.1.1`
 - `react@19.2.3`
 - `typescript@5`
-- `tailwindcss@4` + `flowbite-react`
-- `pg` (PostgreSQL)
-- `jose` (JWT)
-- `pdfjs-dist`, `mammoth`, `tesseract.js` (OCR/extraccion)
+- `tailwindcss@4` + `flowbite-react` + `radix-ui`
+- `pg` (PostgreSQL 8.16.3)
+- `jose` (JWT 6.1.3)
+- `pdfjs-dist` 5.4.296, `mammoth` 1.11.0, `tesseract.js` 7.0.0 (OCR/extraccion)
+- `lucide-react` (iconos)
+- `@skeletonlabs/skeleton` (componentes UI)
 
 ## Arquitectura resumida
 
@@ -54,20 +58,33 @@ lib/
   document-access.ts         # Alcance por secretaria/dependencia
   permisos.ts                # Constantes de permisos
 hooks/
-  useDocumentos, usePrestamos, usePermisos, useAdminUsers, etc.
+  useCurrentUser.ts            # Usuario actual con cache
+  useDocumentos.ts             # Gestion de documentos
+  usePrestamos.ts              # Gestion completa de prestamos con cache
+  usePermisos.tsx              # Validacion de permisos granular
+  useAdminUsers.ts           # Administracion de usuarios
+  useLogin.ts                  # Autenticacion optimizada
+  useActivity.ts             # Tracking de actividad
+  useSecretarias.ts          # Gestion de secretarias
+  useDependencias.ts         # Gestion de dependencias
+  usePagination.ts           # Paginacion reutilizable
 ```
 
 ## Control de acceso y alcance de datos
 
 - Los permisos se gestionan en la tabla `rol_permisos` y constantes en [`lib/permisos.ts`](./lib/permisos.ts).
-- Roles con acceso global a documentos/prestamos: `id_rol` `1` y `2`.
+- Roles con acceso global a documentos/prestamos: `id_rol` `1` (ADMIN_TOTAL) y `2` (EDITOR).
 - Para otros roles, el backend limita acceso por:
-  - `nom_secre` del usuario.
+  - `nom_secre` del usuario (secretaria asignada).
   - `nom_dependencia` (si existe) del usuario.
+- Componente `PermissionGuard` para proteccion de UI por permisos.
+- Hook `usePermisos` para validacion de permisos en frontend.
+- Clase `DocumentScopeError` para manejo de errores de acceso.
 - El alcance se aplica en:
   - `GET/POST/PUT/DELETE /api/documentos`
   - `GET/POST/PUT /api/prestamos`
   - `GET /api/documentos/[id_doc]/archivo`
+  - Validacion automatica en `lib/document-access.ts`
 
 ## Flujo de autenticacion
 
@@ -77,6 +94,7 @@ hooks/
 4. Se crea/actualiza sesion en tabla `sesiones` (una sesion activa por usuario).
 5. El frontend sincroniza nombre y redireccion con `POST /api/user/update-and-redirect`.
 6. `proxy.ts` protege rutas y redirige visitantes a `/visitante`.
+7. **Temporizador de sesion**: Alerta visual 5 minutos antes de expirar, cierre automatico por seguridad.
 
 ## Modulos funcionales
 
@@ -86,11 +104,12 @@ hooks/
 - Filtros por secretaria, dependencia, tipo, fecha y estatus.
 - Metadatos: oficio, expediente, serie, subserie, confidencialidad, caja, ubicacion, estante, etc.
 - Descarga/visualizacion de archivo por `GET /api/documentos/[id_doc]/archivo`.
-- OCR:
-  - PDF: `pdfjs-dist` (texto nativo).
-  - DOCX: `mammoth`.
-  - Imagenes: `tesseract.js`.
-  - Limite: `25 MB`.
+- OCR avanzado:
+  - **PDF**: `pdfjs-dist` 5.4.296 (texto nativo y escaneado).
+  - **DOCX**: `mammoth` 1.11.0.
+  - **Imagenes**: `tesseract.js` 7.0.0 con idioma español.
+  - **Limites**: 25 MB por archivo, timeout 60 segundos.
+  - **Procesamiento**: Automatico al subir documento.
 
 ### Prestamos
 
@@ -198,9 +217,7 @@ npm run lint
 
 ## Documentacion adicional
 
-- [INDEX.md](./docs/INDEX.md)
 - [DOCUMENTACION_TECNICA.md](./docs/DOCUMENTACION_TECNICA.md)
-- [API_REFERENCE.md](./docs/API_REFERENCE.md)
-- [GUIA_DESARROLLADOR.md](./docs/GUIA_DESARROLLADOR.md)
 - [DOCUMENTACION_USUARIO.md](./docs/DOCUMENTACION_USUARIO.md)
 - [CHANGELOG.md](./docs/CHANGELOG.md)
+- [FICHA_TECNICA.md](./docs/FICHA_TECNICA.md) - Arquitectura y Historias de Usuario

@@ -7,8 +7,9 @@
 3. [¿Cómo acceder al sistema?](#cómo-acceder-al-sistema)
 4. [Funcionalidades principales](#funcionalidades-principales)
 5. [Guía paso a paso](#guía-paso-a-paso)
-6. [Preguntas frecuentes](#preguntas-frecuentes)
-7. [Soporte y ayuda](#soporte-y-ayuda)
+6. [Sistema de préstamos](#sistema-de-préstamos)
+7. [Preguntas frecuentes](#preguntas-frecuentes)
+8. [Soporte y ayuda](#soporte-y-ayuda)
 
 ---
 
@@ -61,9 +62,11 @@ Este sistema está diseñado para todos los empleados del Municipio de San Juan 
 
 Es la primera pantalla que verá al iniciar sesión. Aquí encontrará:
 
-- **Estadísticas importantes**: Número total de documentos, secretarías activas
+- **Estadísticas importantes**: Número total de documentos, secretarías activas, préstamos activos
 - **Acceso rápido**: Botones directos a las funciones más usadas
 - **Información personal**: Su nombre y rol en el sistema
+- **Indicador de sesión**: Tiempo restante de su sesión actual
+- **Actividad reciente**: Últimas acciones realizadas en el sistema
 
 ### 📄 Gestión de documentos
 
@@ -130,6 +133,91 @@ Esto facilita encontrar documentos relacionados con áreas específicas.
 2. **Haga clic en el botón "Ver"** para previsualizar
 3. **Haga clic en "Descargar"** para obtener el archivo original
 
+### 🏢 Gestión de usuarios (Administradores)
+
+Si usted es administrador, también puede:
+
+- **👥 Crear usuarios**: Agregar nuevos empleados al sistema
+- **✏️ Editar usuarios**: Modificar datos y permisos
+- **🔄 Cambiar roles**: Asignar diferentes niveles de acceso
+- **📊 Ver estadísticas**: Consultar actividad del sistema
+
+---
+
+## Sistema de préstamos
+
+### 📚 ¿Qué es el sistema de préstamos?
+
+El sistema de préstamos permite solicitar documentos físicos o digitales para consulta temporal. Es ideal cuando necesita:
+
+- Revisar documentos fuera de la oficina
+- Presentar documentos en reuniones
+- Realizar análisis detallados
+- Compartir temporalmente con otras áreas
+
+### 🔄 Ciclo de vida de un préstamo
+
+Los documentos pasan por los siguientes estados:
+
+1. **📝 Solicitado**: Se inicia la solicitud del préstamo
+2. **✅ Prestado**: Documento entregado al solicitante
+3. **⏰ Vencido**: Se cumplió el plazo de devolución
+4. **✅ Devuelto**: Documento regresó al archivo
+5. **❌ Cancelado**: Préstamo anulado por alguna razón
+
+### 📋 ¿Quiénes pueden usar el sistema de préstamos?
+
+- **👤 Solicitantes**: Cualquier usuario autorizado puede solicitar préstamos
+- **🏛️ Administradores**: Gestionan y aprueban solicitudes
+- **📊 Archivistas**: Controlan el movimiento físico de documentos
+
+### 📝 Información requerida para un préstamo
+
+Al solicitar un préstamo, necesitará proporcionar:
+
+- **📄 Documento**: Seleccione el documento que necesita
+- **👤 Nombre completo**: Su nombre completo
+- **🆔 CURP**: Su CURP para identificación
+- **🏢 Área**: Su área o departamento
+- **📋 Motivo**: Razón del préstamo (ej: "Revisión para auditoría")
+- **📅 Fecha límite**: Cuando devolverá el documento
+- **📝 Observaciones**: Notas adicionales (opcional)
+
+### 📚 Solicitar un préstamo
+
+1. **Busque el documento** que desea solicitar en préstamo
+2. **Haga clic en "Solicitar préstamo"** en la vista del documento
+3. **Complete el formulario**:
+   - Verifique que el documento seleccionado es correcto
+   - Ingrese su nombre completo
+   - Proporcione su CURP
+   - Seleccione su área/departamento
+   - Describa el motivo del préstamo
+   - Establezca la fecha límite de devolución
+   - Agregue observaciones si es necesario
+4. **Revise la información** y haga clic en "Enviar solicitud"
+5. **Espere la aprobación** del administrador
+6. **Recibirá una notificación** cuando el préstamo sea aprobado
+
+### 📋 Consultar mis préstamos
+
+1. **Vaya a la sección "Préstamos"** en el menú principal
+2. **Verá todos sus préstamos** con su estatus actual
+3. **Use los filtros** para buscar préstamos específicos:
+   - Por documento
+   - Por estatus (Prestado, Vencido, Devuelto)
+   - Por fecha
+
+### ✅ Devolver un préstamo
+
+1. **Busque el préstamo** que desea devolver en la lista
+2. **Haga clic en "Registrar devolución"**
+3. **Complete la información**:
+   - Confirme la fecha de devolución
+   - Agregue observaciones sobre el estado del documento
+4. **Haga clic en "Confirmar devolución"**
+5. **El préstamo se marcará como "Devuelto"**
+
 ---
 
 ## Preguntas frecuentes
@@ -141,7 +229,36 @@ Puede subir:
 - ✅ **Word**: Documentos de Microsoft Word (.docx)
 - ✅ **Imágenes**: PNG, JPG, JPEG
 
-**Límite de tamaño**: Máximo 25MB por archivo
+> ✅ **Nota**: No hay límite de tamaño para la subida de documentos. El sistema acepta archivos de cualquier tamaño, siempre que cuenten con suficiente espacio de almacenamiento.
+
+### ❓ ¿Cómo funciona el sistema de préstamos?
+
+El sistema de préstamos le permite solicitar documentos para consulta temporal:
+- **Solicitud**: Seleccione el documento y complete el formulario
+- **Aprobación**: Espere la autorización del administrador
+- **Retiro**: Reciba el documento físicamente o digitalmente
+- **Devolución**: Regrese el documento en la fecha acordada
+
+### ❓ ¿Qué documentos puedo solicitar en préstamo?
+
+Depende de su rol y permisos:
+- **Administradores**: Pueden solicitar cualquier documento
+- **Usuarios**: Solo documentos de su secretaría/dependencia
+- **Visitantes**: Acceso muy limitado o ninguno
+
+### ❓ ¿Qué pasa si no devuelvo un préstamo a tiempo?
+
+El sistema:
+- **Marcará el préstamo como "Vencido"** automáticamente
+- **Notificará a los administradores** sobre el retraso
+- **Podría restringir** futuras solicitudes de préstamo
+- **Generará un reporte** de incidencias
+
+### ❓ ¿Puedo cancelar una solicitud de préstamo?
+
+Sí, puede cancelar una solicitud mientras esté:
+- **En estado "Solicitado"** (aún no aprobada)
+- Contacte al administrador si ya fue aprobada
 
 ### ❓ ¿Qué significa "OCR"?
 
@@ -166,16 +283,40 @@ Comuníquese con el administrador del sistema para restablecer su contraseña. P
 ### ❓ ¿Por qué no puedo subir un archivo?
 
 Verifique:
-- 📏 Que el archivo no exceda 25MB
 - 📄 Que sea un formato permitido (PDF, DOCX, PNG, JPG, JPEG)
 - 🌐 Que tenga conexión estable a internet
+- 💾 Que haya suficiente espacio de almacenamiento disponible
 
-### ❓ ¿Qué significa cada rol?
+### ❓ ¿Por qué se cierra mi sesión automáticamente?
 
-- **🏛️ Administrador**: Control total del sistema
-- **👤 Usuario**: Puede crear y editar documentos
-- **👁️ Visor**: Solo puede ver y descargar documentos
-- **🌐 Visitante**: Acceso muy limitado
+El sistema tiene un **temporizador de seguridad** que:
+- **Mide su inactividad** (sin clics ni movimientos)
+- **Muestra una alerta** 5 minutos antes de cerrar
+- **Cierra sesión automáticamente** por seguridad
+- **Protege sus datos** si olvida cerrar sesión
+
+**Solución**: Haga clic en cualquier parte o mueva el mouse para mantener activa su sesión.
+
+### ❓ Qué significa cada rol?
+
+- **🏛️ ADMIN_TOTAL**: Control total del sistema, todos los permisos
+- **� EDITOR**: Puede crear, editar y organizar documentos
+- **👁️ SOLO_LECTURA**: Solo puede ver y descargar documentos
+- **🌐 VISITANTE**: Acceso muy limitado a información pública
+
+### ❓ ¿Puedo ver documentos de otras áreas?
+
+Depende de su rol:
+- **Administradores y Editores**: Sí, pueden ver todos los documentos
+- **Usuarios estándar**: Solo documentos de su secretaría/dependencia asignada
+- **Visitantes**: Muy limitado o ninguno
+
+### ❓ ¿Cómo sé qué documentos puedo ver?
+
+El sistema **filtra automáticamente** según sus permisos:
+- Solo mostrará documentos de su área asignada
+- Los botones de acciones aparecen según sus permisos
+- Si no puede acceder algo, contacte a su administrador
 
 ---
 
@@ -244,6 +385,6 @@ Verifique:
 
 **¿Necesita más ayuda?** Contacte al administrador del sistema o al departamento de TI del Municipio de San Juan del Río.
 
-**Versión del documento**: 1.0  
-**Fecha de actualización**: Enero 2026  
+**Versión del documento**: 2.0  
+**Fecha de actualización**: Abril 2026  
 **Desarrollado para**: Municipio de San Juan del Río

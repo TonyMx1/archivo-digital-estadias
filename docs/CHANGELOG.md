@@ -12,6 +12,122 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Implementación de WebSockets para tiempo real
 - Sistema de notificaciones push
 - Integración con almacenamiento en la nube (AWS S3)
+- Firma digital integrada
+- App móvil (React Native)
+- Analytics avanzados y reportes
+
+### Next Release (0.3.0) - Q3 2026
+
+#### Features
+- **Notificaciones en tiempo real**
+  - WebSocket integration
+  - Push notifications mobile/web
+  - Dashboard de notificaciones
+  - Email notifications configurables
+
+- **Sistema de aprobación workflow**
+  - Múltiples niveles de aprobación
+  - Comentarios y anotaciones
+  - Historial de cambios completo
+  - Estados personalizados por organización
+
+- **Firma digital**
+  - Integración con firma electrónica
+  - Validación de certificados digitales
+  - Sello digital oficial
+  - Compatibilidad con SAT
+
+#### Technical
+- **Performance mejorada**
+  - Redis caching avanzado
+  - Database optimization
+  - CDN para archivos estáticos
+  - Lazy loading optimizado
+
+- **Escalabilidad**
+  - Horizontal scaling support
+  - Load balancing configuration
+  - Database connection pooling
+  - Microservices architecture preparation
+
+---
+
+## [0.2.0] - 2026-04-20
+
+### Added
+- **Sistema completo de préstamos de documentos**
+  - Gestión completa de préstamos (crear, consultar, devolver)
+  - Ciclo de vida completo: Solicitado → Prestado → Vencido → Devuelto → Cancelado
+  - Formulario completo con CURP, área, motivo, observaciones
+  - Control de fechas límite y vencimientos automáticos
+  - Generación de vales y seguimiento de historial
+  - Filtros por documento, secretaría y estatus
+
+- **Control de acceso granular por documento**
+  - Sistema de alcance basado en secretaría/dependencia del usuario
+  - Roles con acceso global: ADMIN_TOTAL, EDITOR
+  - Roles con acceso restringido: SOLO_LECTURA, VISITANTE
+  - Validación automática en API routes
+  - Componente PermissionGuard para protección de UI
+  - Normalización de catálogos para matching flexible
+
+- **Temporizador de sesión y manejo de inactividad**
+  - Detección automática de inactividad del usuario
+  - Alerta visual 5 minutos antes de cerrar sesión
+  - Cierre automático por seguridad
+  - Indicador de tiempo restante en dashboard
+  - Persistencia de estado y recuperación
+
+- **Panel de estadísticas mejorado**
+  - Métricas en tiempo real del sistema
+  - Conteo de préstamos activos
+  - Distribución de documentos por secretaría
+  - Dashboard administrativo con indicadores clave
+  - Endpoint `/api/statistics` con datos consolidados
+
+- **Nuevos componentes UI**
+  - `PermissionGuard`: Protección por permisos
+  - `SessionTimer`: Gestión de sesión con alertas
+  - `UsersTable`: Gestión completa de usuarios
+  - `SecretariasTable`: CRUD inline de secretarías
+  - `HeaderAll`: Navegación contextual por rol
+  - Estados de carga y manejo de errores mejorados
+
+- **Hooks personalizados mejorados**
+  - `useCurrentUser`: Gestión de usuario actual con caché
+  - `usePrestamos`: Gestión completa de préstamos con caché
+  - `usePermisos`: Validación de permisos granular
+  - `useLogin`: Manejo optimizado de autenticación
+  - Caching inteligente en todos los hooks principales
+
+- **Endpoints API expandidos**
+  - `GET/POST/PUT /api/prestamos`: Gestión de préstamos
+  - `GET /api/statistics`: Estadísticas del sistema
+  - `GET /api/user`: Información del usuario actual
+  - `POST /api/upload`: Subida de archivos dedicada
+  - `GET /api/tipo-documento`: Tipos de documento
+  - `GET /api/cus`: Integración con API externa CUS
+
+### Changed
+- **Autenticación**: Migración de `/api/auth/*` a `/api/login`, `/api/logout`, `/api/user`
+- **Base de datos**: Nueva tabla `prestamos_documentos` con relaciones completas
+- **Permisos**: Refactorización a sistema granular por documento
+- **UI**: Componentes actualizados con nuevo sistema de diseño
+- **Performance**: Implementación de caché a nivel de hooks y API
+
+### Technical Updates
+- **Frontend**: Actualización a Next.js 16.1.1, React 19.2.3
+- **Librerías nuevas**: Flowbite React 0.12.17, Skeleton Labs 4.12.1
+- **OCR**: Actualización a Tesseract.js 7.0.0, PDF.js 5.4.296
+- **Tipado**: TypeScript 5 con interfaces completas para todas las entidades
+- **Build**: Optimización de bundle y code splitting mejorado
+
+### Security Enhancements
+- **Document Scope**: Validación de acceso por secretaría/dependencia
+- **Session Management**: Timeout automático y alertas de seguridad
+- **Input Validation**: Validación estricta en todos los endpoints
+- **Error Handling**: Manejo específico para errores de permisos
+- **Audit Trail**: Registro completo de operaciones de préstamos
 
 ---
 
@@ -435,6 +551,6 @@ Para preguntas sobre cambios o roadmap:
 
 ---
 
-**Última actualización**: Enero 2026
-**Versión actual**: 0.1.0
-**Próxima versión planeada**: 0.2.0
+**Última actualización**: Abril 2026
+**Versión actual**: 0.2.0
+**Próxima versión planeada**: 0.3.0 (Q3 2026)

@@ -749,10 +749,10 @@ export default function DocumentosModal({
                     disabled={isSubmitting || isSecretariaLocked}
                     title={searchSecretaria || "Seleccionar secretaría"}
                   >
-                    <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
+                    <span className="min-w-0 flex-1 whitespace-normal wrap-break-word leading-snug">
                       {searchSecretaria ? searchSecretaria : "Seleccionar secretaría..."}
                     </span>
-                    <ChevronDown className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-400 transition-transform" />
+                    <ChevronDown className="mt-0.5 h-5 w-5 shrink-0 text-gray-400 transition-transform" />
                   </button>
 
                   {/* Dropdown de resultados - Menú completo */}
@@ -768,7 +768,7 @@ export default function DocumentosModal({
                               className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                               title={secretaria.nombre_secretaria}
                             >
-                              <div className="font-medium whitespace-normal break-words leading-snug">
+                              <div className="font-medium whitespace-normal wrap-break-word leading-snug">
                                 {secretaria.nombre_secretaria}
                               </div>
                             </button>
@@ -1141,7 +1141,7 @@ export default function DocumentosModal({
                         {isDragActive ? "Suelta el archivo para cargarlo" : "Arrastra tu archivo aqui o usa el boton"}
                       </p>
                       <p className="mb-4 text-xs text-gray-500">
-                        Formatos permitidos: imagen, PDF, DOC y DOCX. Max. 30 MB
+                        Formatos permitidos: imagen, PDF, DOC y DOCX.
                       </p>
                       <button
                         type="button"
@@ -1201,7 +1201,7 @@ export default function DocumentosModal({
                     <button
                       type="button"
                       onClick={removeFile}
-                      className="flex-shrink-0 px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                      className="shrink-0 px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm"
                       disabled={isSubmitting}
                     >
                       ❌
