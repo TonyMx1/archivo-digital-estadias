@@ -615,5 +615,3 @@ CREATE INDEX idx_usuarios_rol ON usuarios(id_rol);
 
 **Versión del Documento**: 1.0  
 **Fecha de Creación**: Abril 2026  
-**Autor**: Equipo de Desarrollo Municipal  
-**Aprobado por**: Dirección de TI Municipal
